@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCOTEL - Procesador de Informes Técnicos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            color: #6c757d;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .file-list {
+            padding: 30px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .file-item:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+        }
+
+        .file-item.procesado {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .file-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            color: #212529;
+        }
+
+        .file-meta {
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+
+        .file-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .status-procesado {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-pendiente {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-left: 4px solid;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .result-item.exitoso {
+            border-color: #28a745;
+        }
+
+        .result-item.error {
+            border-color: #dc3545;
+        }
+
+        .result-item.duplicado {
+            border-color: #ffc107;
+        }
+
+        .result-item.reprocesado {
+            border-color: #17a2b8;
+        }
+
+        .selected-count {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .cost-estimate {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* NUEVO: Estilos para validación */
+        .validation-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .validation-valid {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .validation-invalid {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .validation-details {
+            margin-top: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .validation-summary {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .validation-summary h4 {
+            margin-bottom: 10px;
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Procesador de Informes Técnicos</h1>
+            <p>ARCOTEL - Sistema de Automatización PAS</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Archivos</h3>
+                <div class="value" id="total-archivos">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Procesados</h3>
+                <div class="value" id="archivos-procesados" style="color: #28a745;">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Sin Procesar</h3>
+                <div class="value" id="archivos-pendientes" style="color: #ffc107;">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Completado</h3>
+                <div class="value" id="porcentaje-completado" style="color: #667eea;">0%</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-secondary" onclick="seleccionarTodosPendientes()">
+                ✓ Seleccionar Pendientes
+            </button>
+            <button class="btn-secondary" onclick="deseleccionarTodos()">
+                ✗ Deseleccionar Todos
+            </button>
+            <button class="btn-primary" onclick="recargarLista()">
+                🔄 Recargar Lista
+            </button>
+            <span class="selected-count" id="selected-count">0 seleccionados</span>
+            <span class="cost-estimate" id="cost-estimate">$0.00 USD</span>
+            <button class="btn-success" onclick="procesarSeleccionados()" style="margin-left: auto;">
+                🚀 Procesar Seleccionados
+            </button>
+        </div>
+
+        <div class="file-list" id="file-list">
+            <!-- Se llena dinámicamente -->
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <h3>Procesando archivos...</h3>
+            <p>Esto puede tomar varios minutos. No cierre esta ventana.</p>
+        </div>
+
+        <div class="results" id="results">
+            <h2>Resultados del Procesamiento</h2>
+            <div id="results-content"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const COST_PER_DOC = 0.05; // $0.05 por documento
+
+        let archivos = [];
+        let totalArchivosEnDirectorio = 0;
+
+        // Cargar datos al iniciar
+        window.onload = function() {
+            cargarArchivos(); // Primero cargar archivos
+            cargarEstadisticas(); // Luego estadísticas
+        };
+
+        async function cargarEstadisticas() {
+            try {
+                const response = await fetch(`${API_BASE}/estadisticas`);
+                const data = await response.json();
+
+                console.log('Estadísticas recibidas:', data);
+
+                // El backend devuelve: total_casos, total_documentos, documentos_por_tipo
+                // Necesitamos calcular: total_archivos, procesados, sin_procesar, porcentaje
+
+                // Contar documentos procesados por tipo
+                let totalInformes = 0;
+                let totalPeticiones = 0;
+
+                if (data.documentos_por_tipo && Array.isArray(data.documentos_por_tipo)) {
+                    data.documentos_por_tipo.forEach(item => {
+                        totalInformes += item.informe_tecnico || 0;
+                        totalPeticiones += item.peticion_razonada || 0;
+                    });
+                }
+
+                const totalProcesados = data.total_documentos || (totalInformes + totalPeticiones);
+
+                // Usar el total de archivos del directorio (obtenido en cargarArchivos)
+                const totalArchivos = totalArchivosEnDirectorio || totalProcesados;
+                const sinProcesar = Math.max(0, totalArchivos - totalProcesados);
+                const porcentaje = totalArchivos > 0
+                    ? Math.round((totalProcesados / totalArchivos) * 100)
+                    : 0;
+
+                document.getElementById('total-archivos').textContent = totalArchivos;
+                document.getElementById('archivos-procesados').textContent = totalProcesados;
+                document.getElementById('archivos-pendientes').textContent = sinProcesar;
+                document.getElementById('porcentaje-completado').textContent = porcentaje + '%';
+
+                console.log(`Estadísticas calculadas: ${totalArchivos} total, ${totalProcesados} procesados, ${sinProcesar} pendientes, ${porcentaje}% completado`);
+            } catch (error) {
+                console.error('Error cargando estadísticas:', error);
+                // Mostrar ceros en caso de error
+                document.getElementById('total-archivos').textContent = '0';
+                document.getElementById('archivos-procesados').textContent = '0';
+                document.getElementById('archivos-pendientes').textContent = '0';
+                document.getElementById('porcentaje-completado').textContent = '0%';
+            }
+        }
+
+        async function cargarArchivos() {
+            try {
+                const response = await fetch(`${API_BASE}/archivos/listar`);
+                archivos = await response.json();
+
+                // Guardar el total de archivos en el directorio
+                totalArchivosEnDirectorio = archivos.length;
+
+                renderizarArchivos();
+                actualizarContadores();
+            } catch (error) {
+                console.error('Error cargando archivos:', error);
+                alert('Error al cargar la lista de archivos. Verifique que el servidor esté ejecutándose.');
+            }
+        }
+
+        function renderizarArchivos() {
+            const container = document.getElementById('file-list');
+            container.innerHTML = '';
+
+            archivos.forEach((archivo, index) => {
+                const div = document.createElement('div');
+                div.className = `file-item ${archivo.ya_procesado ? 'procesado' : ''}`;
+
+                const statusClass = archivo.ya_procesado ? 'status-procesado' : 'status-pendiente';
+                const statusText = archivo.ya_procesado ? '✓ Procesado' : '⏳ Pendiente';
+
+                div.innerHTML = `
+                    <input type="checkbox"
+                           id="check-${index}"
+                           onchange="actualizarContadores()"
+                           ${archivo.ya_procesado ? '' : 'checked'}>
+                    <div class="file-info">
+                        <div class="file-name">${archivo.nombre}</div>
+                        <div class="file-meta">
+                            ${archivo.ya_procesado
+                                ? `Procesado: ${archivo.fecha_procesamiento} | ${archivo.numero_documento} | RUC: ${archivo.prestador_ruc} | Caso: ${archivo.caso_id}`
+                                : 'Sin procesar'}
+                        </div>
+                    </div>
+                    <span class="file-status ${statusClass}">${statusText}</span>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        function seleccionarTodosPendientes() {
+            archivos.forEach((archivo, index) => {
+                const checkbox = document.getElementById(`check-${index}`);
+                if (checkbox && !archivo.ya_procesado) {
+                    checkbox.checked = true;
+                }
+            });
+            actualizarContadores();
+        }
+
+        function deseleccionarTodos() {
+            archivos.forEach((archivo, index) => {
+                const checkbox = document.getElementById(`check-${index}`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                }
+            });
+            actualizarContadores();
+        }
+
+        function actualizarContadores() {
+            let count = 0;
+            archivos.forEach((archivo, index) => {
+                const checkbox = document.getElementById(`check-${index}`);
+                if (checkbox && checkbox.checked) {
+                    count++;
+                }
+            });
+
+            const countElement = document.getElementById('selected-count');
+            const costElement = document.getElementById('cost-estimate');
+
+            countElement.textContent = `${count} seleccionado${count !== 1 ? 's' : ''}`;
+
+            if (count === 1) {
+                countElement.textContent += ' (1 ya procesados)';
+            }
+
+            const estimatedCost = (count * COST_PER_DOC).toFixed(2);
+            costElement.textContent = `~$${estimatedCost} USD`;
+
+            // Cambiar colores según selección
+            if (count === 0) {
+                countElement.style.background = '#6c757d';
+                countElement.style.color = 'white';
+            } else {
+                countElement.style.background = '#667eea';
+                countElement.style.color = 'white';
+            }
+        }
+
+        async function procesarSeleccionados() {
+            // Obtener archivos seleccionados
+            const seleccionados = [];
+            const yaProcesados = [];
+
+            archivos.forEach((archivo, index) => {
+                const checkbox = document.getElementById(`check-${index}`);
+                if (checkbox && checkbox.checked) {
+                    seleccionados.push(archivo.nombre);
+                    if (archivo.ya_procesado) {
+                        yaProcesados.push(archivo.nombre);
+                    }
+                }
+            });
+
+            if (seleccionados.length === 0) {
+                alert('No hay archivos seleccionados');
+                return;
+            }
+
+            // Confirmar si hay reprocesos
+            let forzarReprocesar = false;
+            if (yaProcesados.length > 0) {
+                const confirmacion = confirm(
+                    `⚠️ ADVERTENCIA\n\n` +
+                    `${yaProcesados.length} archivo(s) ya fueron procesados:\n` +
+                    `${yaProcesados.slice(0, 3).join('\n')}${yaProcesados.length > 3 ? '\n...' : ''}\n\n` +
+                    `¿Desea crear nuevas versiones de estos documentos?\n\n` +
+                    `Esto NO eliminará las versiones anteriores, pero creará duplicados.`
+                );
+
+                if (!confirmacion) {
+                    return;
+                }
+                forzarReprocesar = true;
+            }
+
+            // Confirmar costo
+            const costo = (seleccionados.length * COST_PER_DOC).toFixed(2);
+            const confirmarProcesar = confirm(
+                `📊 CONFIRMACIÓN DE PROCESAMIENTO\n\n` +
+                `Archivos a procesar: ${seleccionados.length}\n` +
+                `Costo estimado: $${costo} USD\n\n` +
+                `¿Continuar?`
+            );
+
+            if (!confirmarProcesar) {
+                return;
+            }
+
+            // Mostrar loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+
+            try {
+                const response = await fetch(`${API_BASE}/archivos/procesar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        archivos: seleccionados,
+                        forzar_reprocesar: forzarReprocesar
+                    })
+                });
+
+                const resultado = await response.json();
+
+                // Ocultar loading
+                document.getElementById('loading').classList.remove('active');
+
+                // Mostrar resultados
+                mostrarResultados(resultado);
+
+                // Recargar estadísticas y lista
+                await cargarArchivos();
+                await cargarEstadisticas();
+
+            } catch (error) {
+                console.error('Error procesando archivos:', error);
+                document.getElementById('loading').classList.remove('active');
+                alert('Error al procesar archivos: ' + error.message);
+            }
+        }
+
+        function mostrarResultados(resultado) {
+            const container = document.getElementById('results-content');
+            container.innerHTML = '';
+
+            // Resumen con costos reales
+            const resumen = document.createElement('div');
+            resumen.innerHTML = `
+                <h3>Resumen</h3>
+                <p>✅ Exitosos: ${resultado.exitosos}</p>
+                <p>🔄 Reprocesados: ${resultado.reprocesados}</p>
+                <p>❌ Fallidos: ${resultado.fallidos}</p>
+                <hr style="margin: 20px 0;">
+                <h3>💰 Costos Reales</h3>
+                <p><strong>Costo Total: $${resultado.costo_total_usd} USD</strong></p>
+                <p>📊 Tokens consumidos:</p>
+                <ul>
+                    <li>Input: ${resultado.tokens_total_input.toLocaleString()} tokens</li>
+                    <li>Output: ${resultado.tokens_total_output.toLocaleString()} tokens</li>
+                    <li>Total: ${resultado.tokens_total.toLocaleString()} tokens</li>
+                </ul>
+                <p style="font-size: 0.9em; color: #6c757d;">
+                    <em>Precios vigentes al 29-ene-2025: $3/1M input, $15/1M output</em><br>
+                    <em>Fuente: <a href="https://www.anthropic.com/pricing" target="_blank">https://www.anthropic.com/pricing</a></em>
+                </p>
+                <hr style="margin: 20px 0;">
+            `;
+            container.appendChild(resumen);
+
+            // NUEVO: Resumen de validación
+            let totalValidados = 0;
+            let totalConErrores = 0;
+            resultado.detalles.forEach(detalle => {
+                if (detalle.validacion) {
+                    if (detalle.validacion.es_valido) {
+                        totalValidados++;
+                    } else {
+                        totalConErrores++;
+                    }
+                }
+            });
+
+            if (totalValidados > 0 || totalConErrores > 0) {
+                const validacionSummary = document.createElement('div');
+                validacionSummary.className = 'validation-summary';
+                validacionSummary.innerHTML = `
+                    <h4>📋 Resumen de Validación</h4>
+                    <p>✅ Documentos válidos: ${totalValidados}</p>
+                    <p>⚠️ Documentos con inconsistencias: ${totalConErrores}</p>
+                `;
+                container.appendChild(validacionSummary);
+            }
+
+            // Detalles por archivo con VALIDACIÓN
+            resultado.detalles.forEach(detalle => {
+                const div = document.createElement('div');
+                div.className = `result-item ${detalle.estado}`;
+
+                let icono = '';
+                if (detalle.estado === 'exitoso') icono = '✅';
+                if (detalle.estado === 'error') icono = '❌';
+                if (detalle.estado === 'duplicado') icono = '⚠️';
+                if (detalle.estado === 'reprocesado') icono = '🔄';
+
+                // NUEVO: Badge de validación
+                let validacionBadge = '';
+                let validacionDetalles = '';
+
+                if (detalle.validacion) {
+                    if (detalle.validacion.es_valido) {
+                        validacionBadge = `<span class="validation-badge validation-valid">✓ Validación: OK</span>`;
+                    } else {
+                        validacionBadge = `<span class="validation-badge validation-invalid">⚠️ ${detalle.validacion.inconsistencias} inconsistencias</span>`;
+
+                        // Botón para ver detalles
+                        validacionDetalles = `
+                            <div class="validation-details">
+                                <strong>Inconsistencias detectadas:</strong> ${detalle.validacion.inconsistencias}<br>
+                                <a href="#" onclick="verDetalleValidacion(${detalle.documento_id}); return false;">
+                                    Ver reporte completo de validación →
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Mostrar costo individual
+                let costoInfo = '';
+                if (detalle.costo_usd !== undefined) {
+                    costoInfo = `<br><small>💰 Costo: $${detalle.costo_usd} USD | 📊 ${detalle.tokens.toLocaleString()} tokens</small>`;
+                }
+
+                div.innerHTML = `
+                    <strong>${icono} ${detalle.archivo}</strong>
+                    ${validacionBadge}
+                    <br>
+                    ${detalle.mensaje}
+                    ${detalle.caso_id ? `<br><small>Caso ID: ${detalle.caso_id} | Documento ID: ${detalle.documento_id || 'N/A'}</small>` : ''}
+                    ${costoInfo}
+                    ${validacionDetalles}
+                `;
+
+                container.appendChild(div);
+            });
+
+            document.getElementById('results').classList.add('active');
+        }
+
+        // ============================================
+        // FUNCIÓN CORREGIDA: Ver detalle de validación
+        // ============================================
+        async function verDetalleValidacion(documentoId) {
+            try {
+                const response = await fetch(`http://localhost:8000/api/validacion/${documentoId}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                console.log('Datos de validación recibidos:', data); // Para debugging
+
+                // ✅ CORRECCIÓN: Acceder a las propiedades correctas del JSON
+                let detallesHTML = `
+                    <h3>📋 Reporte de Validación</h3>
+                    <p><strong>Documento:</strong> ${data.numero_documento}</p>
+                    <p><strong>Archivo:</strong> ${data.archivo_nombre}</p>
+                    <p><strong>Tipo:</strong> ${data.tipo_documento}</p>
+                    <hr>
+                    <p><strong>Estado:</strong> ${data.es_valido ? '✅ Válido' : '⚠️ Con errores'}</p>
+                    <p><strong>Total inconsistencias:</strong> ${data.total_inconsistencias}</p>
+                    <hr>
+                    <p><strong>Desglose:</strong></p>
+                    <ul>
+                        <li>ℹ️ Info: ${data.num_info}</li>
+                        <li>⚠️ Warnings: ${data.num_warnings}</li>
+                        <li>❌ Errors: ${data.num_errors}</li>
+                        <li>🚨 Critical: ${data.num_critical}</li>
+                    </ul>
+                `;
+
+                // ✅ CORRECCIÓN: Las inconsistencias están en data.inconsistencias (NO en data.validacion.inconsistencias)
+                if (data.inconsistencias && data.inconsistencias.length > 0) {
+                    detallesHTML += '<hr><h4>Detalles de Inconsistencias:</h4><ul>';
+
+                    data.inconsistencias.forEach(inc => {
+                        let icono = '•';
+                        if (inc.nivel === 'error') icono = '❌';
+                        else if (inc.nivel === 'critical') icono = '🚨';
+                        else if (inc.nivel === 'warning') icono = '⚠️';
+                        else if (inc.nivel === 'info') icono = 'ℹ️';
+
+                        detallesHTML += `
+                            <li>
+                                <strong>${icono} ${inc.campo}</strong><br>
+                                ${inc.valor_extraido && inc.valor_extraido !== 'None' ? `Extraído: ${inc.valor_extraido}<br>` : ''}
+                                ${inc.valor_esperado && inc.valor_esperado !== 'None' ? `Esperado: ${inc.valor_esperado}<br>` : ''}
+                                <em>${inc.descripcion}</em>
+                                ${inc.articulo_legal ? `<br><small>📖 Base legal: ${inc.articulo_legal}</small>` : ''}
+                            </li>
+                        `;
+                    });
+
+                    detallesHTML += '</ul>';
+                } else {
+                    detallesHTML += '<hr><p><em>✅ No se detectaron inconsistencias</em></p>';
+                }
+
+                // Mostrar en alert (temporal - idealmente un modal HTML bonito)
+                alert(detallesHTML.replace(/<[^>]*>/g, '\n').replace(/&nbsp;/g, ' '));
+
+                // Log para debugging
+                console.log('Detalle de validación:', data);
+
+            } catch (error) {
+                console.error('Error obteniendo detalle de validación:', error);
+                alert(`Error al cargar el detalle de validación:\n\n${error.message}\n\nRevise la consola (F12) para más detalles.`);
+            }
+        }
+
+        function recargarLista() {
+            cargarArchivos();
+            cargarEstadisticas();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+# =====================================================
+# SERVICIO DE PSEUDONIMIZACIÓN - DEPENDENCIAS
+# =====================================================
+
+# Framework Web
+fastapi==0.128.0
+uvicorn==0.40.0
+python-multipart==0.0.22
+
+# Base de Datos
+SQLAlchemy==2.0.46
+psycopg2-binary==2.9.11
+alembic==1.18.1
+
+# Validación
+pydantic==2.12.5
+pydantic-settings==2.12.0
+
+# Seguridad y Cifrado
+cryptography==46.0.4
+python-jose==3.5.0
+passlib==1.7.4
+
+# Cliente HashiCorp Vault
+hvac==2.4.0
+
+# Redis
+redis==7.1.1
+hiredis==3.3.0
+
+# Utilidades
+python-dotenv==1.2.1
+httpx==0.28.1
+
+# Logging y Monitoreo
+python-json-logger==4.0.0
+
+# Testing (opcional pero recomendado)
+pytest==9.0.2
+pytest-asyncio==1.3.0
+pytest-cov==7.0.0
+
+spacy==3.8.11

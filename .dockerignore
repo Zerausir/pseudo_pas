@@ -1,0 +1,132 @@
+# ============================================
+# .dockerignore - Optimización de builds
+# ============================================
+
+# ============================================
+# GIT
+# ============================================
+.git
+.gitignore
+.gitattributes
+*.md
+!README.md
+
+# ============================================
+# PYTHON
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ============================================
+# DOCKER
+# ============================================
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ============================================
+# DATOS Y RESULTADOS (no copiar al build)
+# ============================================
+data/
+resultados/
+*.pdf
+*.csv
+*.xlsx
+*.json
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# Backups
+*.bak
+*.backup
+
+# ============================================
+# SISTEMA OPERATIVO
+# ============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================
+# TEMPORAL
+# ============================================
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# ============================================
+# CONFIGURACIÓN SENSIBLE
+# ============================================
+.env
+.env.local
+.env.production
+secrets/
+*.pem
+*.key
+*.crt
+
+# ============================================
+# DOCUMENTACIÓN DE DESARROLLO
+# ============================================
+docs/
+examples/
+tests/
+
+# ============================================
+# CI/CD
+# ============================================
+.github/
+.gitlab-ci.yml
+.travis.yml

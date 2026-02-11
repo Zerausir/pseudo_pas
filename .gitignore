@@ -1,0 +1,307 @@
+# ============================================
+# .gitignore - PROYECTO ARCOTEL PAS
+# ============================================
+
+# ============================================
+# PYTHON
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath
+*.sage.py
+
+# Environments
+.env
+.env.local
+.env.*.local
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder
+.spyderproject
+.spyproject
+
+# Rope
+.ropeproject
+
+# mkdocs
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython
+cython_debug/
+
+# ============================================
+# DATOS Y RESULTADOS
+# ============================================
+data/
+!data/.gitkeep
+resultados/
+!resultados/.gitkeep
+logs/
+!logs/.gitkeep
+backups/
+!backups/.gitkeep
+
+# PDFs y documentos
+*.pdf
+*.docx
+*.xlsx
+*.csv
+*.json
+!**/schema.json
+!**/example.json
+
+# Bases de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# ============================================
+# DOCKER
+# ============================================
+# No ignorar docker files, son parte del proyecto
+# Pero sí ignorar volúmenes
+postgres-data/
+
+# ============================================
+# IDEs Y EDITORES
+# ============================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+.netrwhist
+*~
+tags
+[._]*.un~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ============================================
+# SISTEMA OPERATIVO
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================
+# SEGURIDAD
+# ============================================
+*.key
+*.pem
+*.crt
+*.p12
+secrets/
+.secrets/
+
+# ============================================
+# TEMPORAL
+# ============================================
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*.bak
+*.backup
+*.old
+
+# ============================================
+# COMPILADOS Y BUILD
+# ============================================
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.pyc
+*.pyo
+
+# ============================================
+# ESPECÍFICO DEL PROYECTO
+# ============================================
+# Resultados de experimentos
+experimento_*.json
+validaciones_*.json
+metricas_*.json
+
+# Gráficos generados
+*.png
+*.jpg
+*.jpeg
+!docs/images/*.png
+!docs/images/*.jpg
+
+# Logs de procesamiento
+procesamiento_*.log
+extraccion_*.log
+
+# ============================================
+# MANTENER DIRECTORIOS VACÍOS
+# ============================================
+!.gitkeep

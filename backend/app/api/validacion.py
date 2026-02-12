@@ -2,7 +2,7 @@
 API Endpoints para validación visual de pseudonimización.
 OBLIGATORIO antes de procesar documentos.
 
-Versión: 1.1 - IMPORTS CORREGIDOS
+Versión: 1.2 - CONTADOR DUAL (únicos + reemplazos)
 """
 
 from fastapi import APIRouter, HTTPException
@@ -12,8 +12,7 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 
-# ✅ IMPORTS CORREGIDOS
-from backend.app.database import get_db  # ⬅️ CAMBIADO: era "from app.database"
+from backend.app.database import get_db
 from backend.app.services.pseudonym_client import pseudonym_client
 from backend.app.extractors.informe_tecnico_extractor import extraer_texto_pdf
 
@@ -21,7 +20,7 @@ router = APIRouter(prefix="/api/validacion", tags=["validacion"])
 
 # Configuración
 DATA_DIR = Path("/app/data")
-OUTPUTS_DIR = Path("/app/outputs")  # ⬅️ CAMBIADO: directorio dentro del contenedor
+OUTPUTS_DIR = Path("/app/outputs")
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -51,7 +50,8 @@ def generar_html_validacion(
         mapping: dict,
         session_id: str,
         archivo: str,
-        stats: dict
+        stats: dict,
+        total_reemplazos: int  # ⬅️ NUEVO PARÁMETRO
 ) -> str:
     """
     Genera HTML interactivo con texto pseudonimizado resaltado.
@@ -62,6 +62,7 @@ def generar_html_validacion(
         session_id: ID de sesión
         archivo: Nombre del archivo
         stats: Estadísticas de pseudonimización
+        total_reemplazos: Total de reemplazos realizados
 
     Returns:
         str: HTML completo
@@ -111,23 +112,25 @@ def generar_html_validacion(
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             padding: 20px;
+            min-height: 100vh;
         }}
 
         .container {{
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }}
 
         .header {{
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
-            padding: 30px;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
             text-align: center;
         }}
 
@@ -136,29 +139,20 @@ def generar_html_validacion(
             margin-bottom: 10px;
         }}
 
-        .header p {{
-            font-size: 1.1em;
-            opacity: 0.9;
-        }}
-
         .warning {{
             background: #fff3cd;
             border-left: 5px solid #ffc107;
             padding: 20px;
-            margin: 20px;
-            border-radius: 8px;
-            animation: pulse 2s infinite;
+            margin-bottom: 25px;
+            border-radius: 4px;
         }}
 
-        @keyframes pulse {{
-            0%, 100% {{ opacity: 1; }}
-            50% {{ opacity: 0.8; }}
-        }}
-
-        .warning h2 {{
+        .warning h3 {{
             color: #856404;
-            margin-bottom: 10px;
-            font-size: 1.3em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }}
 
         .warning ul {{
@@ -167,74 +161,77 @@ def generar_html_validacion(
         }}
 
         .warning li {{
-            padding: 5px 0;
-            color: #856404;
+            margin: 8px 0;
+            padding-left: 25px;
+            position: relative;
         }}
 
         .warning li:before {{
-            content: "⚠️ ";
-            margin-right: 8px;
+            content: "⚠️";
+            position: absolute;
+            left: 0;
         }}
 
         .stats {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            padding: 20px;
-            background: #f8f9fa;
+            margin-bottom: 25px;
         }}
 
         .stat-card {{
-            background: white;
-            padding: 15px;
+            background: #f8f9fa;
+            padding: 20px;
             border-radius: 8px;
             border-left: 4px solid #667eea;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
         }}
 
         .stat-card h3 {{
+            color: #495057;
             font-size: 0.9em;
-            color: #666;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
 
         .stat-card p {{
-            font-size: 1.8em;
+            color: #667eea;
+            font-size: 2em;
             font-weight: bold;
+        }}
+
+        /* ⬇️ NUEVO: Estilos para destacar la diferencia */
+        .stat-card.total-unicos {{
+            border-left-color: #667eea;
+        }}
+
+        .stat-card.total-unicos p {{
             color: #667eea;
         }}
 
-        .document {{
-            padding: 20px;
-            background: white;
-            max-height: 600px;
-            overflow-y: auto;
-            border-top: 2px solid #e9ecef;
+        .stat-card.total-reemplazos {{
+            border-left-color: #f5576c;
         }}
 
-        .document pre {{
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #333;
+        .stat-card.total-reemplazos p {{
+            color: #f5576c;
         }}
 
-        .pseudonym:hover {{
-            transform: scale(1.05);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        .stat-card.total-reemplazos h3 {{
+            color: #c92a3a;
         }}
 
         .legend {{
+            background: #e9ecef;
             padding: 20px;
-            background: #f8f9fa;
-            border-top: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 25px;
         }}
 
         .legend h3 {{
             margin-bottom: 15px;
-            color: #333;
+            color: #495057;
         }}
 
         .legend-items {{
@@ -246,67 +243,95 @@ def generar_html_validacion(
         .legend-item {{
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }}
 
         .legend-color {{
             width: 30px;
-            height: 20px;
+            height: 30px;
             border-radius: 4px;
-            border: 1px solid #ddd;
+            border: 1px solid #dee2e6;
+        }}
+
+        .document {{
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 2px solid #dee2e6;
+        }}
+
+        .document pre {{
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            color: #212529;
+        }}
+
+        .pseudonym {{
+            cursor: help;
+            transition: all 0.2s;
+        }}
+
+        .pseudonym:hover {{
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }}
 
         .checklist {{
+            background: #d1ecf1;
+            border-left: 5px solid #0c5460;
             padding: 20px;
-            background: #e3f2fd;
-            border-top: 2px solid #2196f3;
+            margin-bottom: 25px;
+            border-radius: 4px;
         }}
 
         .checklist h3 {{
+            color: #0c5460;
             margin-bottom: 15px;
-            color: #1976d2;
         }}
 
         .checklist ul {{
             list-style: none;
+            padding-left: 0;
         }}
 
         .checklist li {{
-            padding: 8px 0;
-            color: #1565c0;
+            margin: 8px 0;
+            padding-left: 25px;
+            position: relative;
         }}
 
         .checklist li:before {{
-            content: "☐ ";
-            margin-right: 8px;
-            font-size: 1.2em;
-        }}
-
-        .footer {{
-            padding: 20px;
-            background: #333;
-            color: white;
-            text-align: center;
-        }}
-
-        .footer p {{
-            margin: 5px 0;
-            font-size: 0.9em;
+            content: "☑️";
+            position: absolute;
+            left: 0;
         }}
 
         .command {{
-            background: #2d2d2d;
+            background: #282a36;
             color: #f8f8f2;
-            padding: 15px;
-            margin: 20px;
+            padding: 20px;
             border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            overflow-x: auto;
+            margin-bottom: 25px;
         }}
 
         .command pre {{
-            margin: 0;
-            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            overflow-x: auto;
+        }}
+
+        .footer {{
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            color: #6c757d;
+            font-size: 0.9em;
         }}
     </style>
 </head>
@@ -318,7 +343,7 @@ def generar_html_validacion(
         </div>
 
         <div class="warning">
-            <h2>⚠️ ADVERTENCIA CRÍTICA - CUMPLIMIENTO LOPDP</h2>
+            <h3>⚠️ ADVERTENCIA CRÍTICA - CUMPLIMIENTO LOPDP</h3>
             <ul>
                 <li>Debe revisar MANUALMENTE todo el texto antes de confirmar</li>
                 <li>Verifique que NO aparecen nombres, cédulas, RUCs, emails o direcciones REALES</li>
@@ -336,9 +361,13 @@ def generar_html_validacion(
                 <h3>Session ID</h3>
                 <p style="font-size: 0.9em;">{session_id}</p>
             </div>
-            <div class="stat-card">
-                <h3>Total Pseudónimos</h3>
+            <div class="stat-card total-unicos">
+                <h3>📊 Pseudónimos Únicos</h3>
                 <p>{stats.get('total', 0)}</p>
+            </div>
+            <div class="stat-card total-reemplazos">
+                <h3>🔄 Total Reemplazos</h3>
+                <p>{total_reemplazos}</p>
             </div>
             <div class="stat-card">
                 <h3>Timestamp</h3>
@@ -503,9 +532,14 @@ async def previsualizar_pseudonimizacion(request: PreviewRequest):
         mapping = result.get('mapping', {})
         pseudonyms_count = result['pseudonyms_count']
 
+        # ⬇️ NUEVO: Capturar stats completo
+        result_stats = result.get('stats', {})
+        total_reemplazos = result_stats.get('total_reemplazos', 0)
+
         print(f"✅ Pseudonimización exitosa")
         print(f"   🆔 Session ID: {session_id}")
-        print(f"   🔢 Pseudónimos: {pseudonyms_count}")
+        print(f"   🔢 Pseudónimos únicos: {pseudonyms_count}")
+        print(f"   🔄 Total reemplazos: {total_reemplazos}")  # ⬅️ NUEVO LOG
 
     except Exception as e:
         raise HTTPException(500, f"Error en pseudonimización: {str(e)}")
@@ -521,14 +555,15 @@ async def previsualizar_pseudonimizacion(request: PreviewRequest):
         if tipo != 'total':
             print(f"   {tipo}: {count}")
 
-    # 5. Generar HTML
+    # 5. Generar HTML (⬅️ MODIFICADO: pasar total_reemplazos)
     print(f"\n🌐 Generando HTML de validación...")
     html = generar_html_validacion(
         texto_pseudonimizado,
         mapping,
         session_id,
         request.archivo,
-        stats
+        stats,
+        total_reemplazos  # ⬅️ NUEVO PARÁMETRO
     )
 
     # 6. Guardar HTML

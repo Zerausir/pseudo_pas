@@ -1,5 +1,10 @@
 """
-Detector de entidades nombradas usando spaCy NER.
+Detector de entidades nombradas usando spaCy NER - VERSIÓN MEJORADA
+
+MEJORAS:
+- Normalización de MAYÚSCULAS SOSTENIDAS antes de pasar a spaCy
+- Validación estricta de nombres para evitar falsos positivos
+- Detección mejorada de nombres en documentos ARCOTEL
 
 SOLO DETECTA PERSONAS (PER) con validación estricta:
 - Títulos profesionales: Ing., Dr., Econ., Abg., etc.
@@ -18,10 +23,54 @@ logger = logging.getLogger(__name__)
 # Cargar modelo una sola vez (al iniciar el servicio)
 try:
     nlp = spacy.load("es_core_news_lg")
-    logger.info("✅ Modelo spaCy cargado correctamente")
+    logger.info("✅ Modelo spaCy LARGE cargado correctamente")
 except Exception as e:
     logger.error(f"❌ Error cargando spaCy: {e}")
     nlp = None
+
+
+def normalizar_mayusculas(texto: str) -> str:
+    """
+    Normaliza MAYÚSCULAS SOSTENIDAS a Title Case para mejorar detección de spaCy.
+
+    Ejemplo:
+        "CHARCO IÑIGUEZ KLEVER LUIS trabaja en ARCOTEL"
+        → "Charco Iñiguez Klever Luis trabaja en ARCOTEL"
+
+    IMPORTANTE: Mantiene siglas conocidas (ARCOTEL, SAI, GFC, etc.)
+
+    Args:
+        texto: Texto con mayúsculas sostenidas
+
+    Returns:
+        str: Texto normalizado
+    """
+    # Siglas y acrónimos que NO deben normalizarse
+    SIGLAS_CONOCIDAS = {
+        'ARCOTEL', 'SAI', 'GFC', 'CTDG', 'CCON', 'DEDA', 'CTRP', 'CADF',
+        'RUC', 'LOT', 'COA', 'USD', 'ROTH', 'TH', 'PAS', 'NER', 'IA', 'AI',
+        'PDF', 'HTML', 'API', 'HTTP', 'HTTPS', 'URL', 'XML', 'JSON',
+        'CAFI', 'SGD', 'CZ2', 'QUITO', 'GUAYAQUIL', 'CUENCA'
+    }
+
+    palabras = texto.split()
+    palabras_normalizadas = []
+
+    for palabra in palabras:
+        palabra_limpia = palabra.strip('.,;:()[]{}')
+
+        # Mantener siglas conocidas
+        if palabra_limpia in SIGLAS_CONOCIDAS:
+            palabras_normalizadas.append(palabra)
+        # Normalizar palabras largas en mayúsculas
+        elif palabra_limpia.isupper() and len(palabra_limpia) > 2 and palabra_limpia.isalpha():
+            # Preservar puntuación al final
+            sufijo = palabra[len(palabra_limpia):]
+            palabras_normalizadas.append(palabra_limpia.title() + sufijo)
+        else:
+            palabras_normalizadas.append(palabra)
+
+    return ' '.join(palabras_normalizadas)
 
 
 def detectar_entidades_spacy(texto: str) -> List[Dict]:
@@ -30,6 +79,8 @@ def detectar_entidades_spacy(texto: str) -> List[Dict]:
 
     SOLO DETECTA PERSONAS (PER), ignora ubicaciones (LOC).
     Las ubicaciones específicas ya se detectan con Regex.
+
+    MEJORA: Normaliza MAYÚSCULAS antes de pasar a spaCy para mejor detección.
 
     Args:
         texto: Texto a analizar
@@ -42,7 +93,12 @@ def detectar_entidades_spacy(texto: str) -> List[Dict]:
         return []
 
     try:
-        doc = nlp(texto)
+        # ===== NUEVO: NORMALIZACIÓN DE MAYÚSCULAS =====
+        texto_normalizado = normalizar_mayusculas(texto)
+        logger.debug(f"📝 Texto normalizado para spaCy")
+
+        # Aplicar spaCy al texto normalizado
+        doc = nlp(texto_normalizado)
         entidades = []
 
         for ent in doc.ents:
@@ -145,20 +201,22 @@ def es_nombre_real(texto: str) -> bool:
     # FILTRO 8: No debe tener palabras cortadas (menos de 3 caracteres sin título)
     for palabra in palabras:
         palabra_limpia = palabra.strip('.,;:')
-        # Ignorar títulos cortos
+        # Ignorar títulos cortos y conectores
         if palabra_limpia.lower() not in ['ing', 'dr', 'sr', 'sra', 'ab', 'de', 'la', 'y']:
             if len(palabra_limpia) < 3:
                 return False
 
-    # FILTRO 9: Debe tener apellidos (palabras en mayúscula sostenida)
+    # FILTRO 9: Debe tener apellidos (palabras en mayúscula sostenida) o título
+    # NOTA: Esto ahora es más flexible gracias a la normalización
     palabras_mayusculas = sum(1 for p in palabras if p.isupper() and len(p) > 3)
 
     # Si tiene título profesional, es muy probable que sea nombre real
-    if tiene_titulo and palabras_mayusculas >= 1:
+    if tiene_titulo and len(palabras) >= 2:
         return True
 
-    # Sin título, debe tener al menos 2 palabras en mayúscula (apellidos)
-    if palabras_mayusculas >= 2:
+    # Sin título, debe tener al menos 2 palabras (apellido + nombre)
+    # Con la normalización, ya no necesitamos palabras en mayúscula
+    if len(palabras) >= 2:
         return True
 
     # Rechazar todo lo demás

@@ -4,10 +4,10 @@ Extractor de Informe Técnico usando Claude API con Pseudonimización.
 MODIFICADO para incluir pseudonimización de datos personales antes de enviar a Claude API.
 Cumple con LOPDP Ecuador Arts. 10.e, 33, 37.
 
-Versión: 4.0 - Soporte para session_id en validación obligatoria
+Versión: 4.1 - Retry logic para error 529 Overloaded
 
 Autor: Iván Suárez
-Fecha: 2026-02-11
+Fecha: 2026-02-13
 """
 import os
 import json
@@ -104,7 +104,7 @@ def extraer_texto_pdf(pdf_path: str) -> str:
 
 async def extraer_con_claude(
         texto_pdf: str,
-        session_id: Optional[str] = None  # ⬅️ NUEVO: Parámetro opcional
+        session_id: Optional[str] = None
 ) -> Tuple[dict, dict]:
     """
     Usa Claude API para extraer datos estructurados con PSEUDONIMIZACIÓN OBLIGATORIA.
@@ -113,7 +113,7 @@ async def extraer_con_claude(
     1. Pseudonimizar texto (OBLIGATORIO - aborta si falla)
     2. Verificar que se pseudonimizaron datos
     3. Mostrar y guardar texto pseudonimizado para auditoría
-    4. Enviar texto pseudonimizado a Claude API
+    4. Enviar texto pseudonimizado a Claude API (CON RETRY LOGIC)
     5. Recibir datos extraídos (con pseudónimos)
     6. Des-pseudonimizar datos (valores reales)
     7. Retornar datos reales
@@ -133,7 +133,6 @@ async def extraer_con_claude(
     print("🤖 INICIANDO EXTRACCIÓN CON CLAUDE API (CON PSEUDONIMIZACIÓN OBLIGATORIA)")
     print("=" * 80)
 
-    # ⬇️ NUEVO: Mostrar session_id si fue proporcionado
     if session_id:
         print(f"🔑 Usando Session ID existente: {session_id}")
         print("   (de validación previa - datos ya verificados por usuario)")
@@ -156,10 +155,9 @@ async def extraer_con_claude(
     print(f"📄 Longitud texto original: {len(texto_pdf):,} caracteres")
 
     try:
-        # ⬇️ MODIFICADO: Pasar session_id al cliente
         pseudonym_result = await pseudonym_client.pseudonymize_text(
             texto_pdf,
-            session_id=session_id  # ⬅️ NUEVO: Reutiliza sesión si existe
+            session_id=session_id
         )
 
         texto_pseudonimizado = pseudonym_result["pseudonymized_text"]
@@ -170,7 +168,6 @@ async def extraer_con_claude(
         print(f"\n✅ Pseudonimización EXITOSA:")
         print(f"   🆔 Session ID: {session_id_usado}")
 
-        # ⬇️ NUEVO: Indicar si reutilizó sesión o creó nueva
         if session_id and session_id == session_id_usado:
             print(f"   ♻️  Sesión reutilizada (de validación previa)")
         else:
@@ -182,7 +179,6 @@ async def extraer_con_claude(
         if mapping:
             print(f"\n📋 Pseudónimos creados (primeros 10):")
             for i, (pseudonym, original) in enumerate(list(mapping.items())[:10], 1):
-                # Mostrar solo primeros 30 chars del valor original por seguridad
                 original_preview = original[:30] + "..." if len(original) > 30 else original
                 print(f"   {i}. {original_preview} → {pseudonym}")
             if len(mapping) > 10:
@@ -195,7 +191,6 @@ async def extraer_con_claude(
             print("⚠️  Continuando de todos modos (el documento puede no tener datos personales)")
 
     except Exception as e:
-        # ❌ SI FALLA LA PSEUDONIMIZACIÓN, ABORTAR COMPLETAMENTE
         raise Exception(
             f"❌ ABORTADO: Error en pseudonimización: {str(e)}\n"
             f"No se puede enviar datos a Claude sin pseudonimización (LOPDP Art. 10.e).\n"
@@ -214,8 +209,6 @@ async def extraer_con_claude(
     print("=" * 80 + "\n")
 
     # Guardar texto completo en archivo temporal para auditoría
-    import tempfile
-
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     try:
@@ -248,7 +241,7 @@ async def extraer_con_claude(
     except Exception as e:
         print(f"⚠️ No se pudo guardar archivo temporal: {e}\n")
 
-    # ========== PASO 4: ENVIAR A CLAUDE API ==========
+    # ========== PASO 4: ENVIAR A CLAUDE API (CON RETRY LOGIC) ==========
     print("🚀 Enviando texto pseudonimizado a Claude API...")
 
     client = anthropic.Anthropic(api_key=api_key)
@@ -301,95 +294,132 @@ REGLAS:
 
 === RESPONDE SOLO CON EL JSON ==="""
 
+    # ========== RETRY LOGIC PARA ERROR 529 OVERLOADED ==========
+    max_retries = 3
+    last_error = None
+    response = None
+
+    for intento in range(max_retries):
+        try:
+            if intento > 0:
+                print(f"🔄 Reintento {intento + 1}/{max_retries}...")
+
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=2500,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # ✅ Éxito, salir del loop
+            print("✅ Claude API respondió exitosamente")
+            break
+
+        except anthropic.APIError as e:
+            last_error = e
+            error_str = str(e).lower()
+
+            # Verificar si es error 529 overloaded
+            if "overloaded" in error_str or "529" in error_str:
+                if intento < max_retries - 1:
+                    wait_time = (2 ** intento) * 5  # 5s, 10s, 20s
+                    print(f"⚠️ Claude API sobrecargada (error 529).")
+                    print(f"   Reintentando en {wait_time}s... (intento {intento + 1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                    continue
+                else:
+                    raise Exception(
+                        f"❌ Error en Claude API: Claude está temporalmente sobrecargado.\n"
+                        f"Se intentó {max_retries} veces sin éxito.\n"
+                        f"Por favor intenta nuevamente en 2-5 minutos."
+                    )
+            else:
+                # Otro tipo de error, lanzar inmediatamente
+                raise Exception(f"❌ Error en Claude API: {str(e)}")
+
+    # Si salimos del loop sin éxito, lanzar el último error
+    if response is None:
+        if last_error:
+            raise last_error
+        else:
+            raise Exception("❌ Error desconocido en Claude API")
+
+    # ========== FIN RETRY LOGIC ==========
+
+    # Capturar tokens y calcular costo
+    usage = response.usage
+    print(f"\n📊 Tokens: {usage.input_tokens:,} input + {usage.output_tokens:,} output")
+
+    costo_info = {
+        "costo_usd": round(
+            (usage.input_tokens * 3.00 / 1_000_000) +
+            (usage.output_tokens * 15.00 / 1_000_000),
+            4
+        ),
+        "input_tokens": usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+        "total_tokens": usage.input_tokens + usage.output_tokens,
+        "model": "claude-sonnet-4-20250514",
+        "pricing_date": "2025-01-29"
+    }
+    print(f"💰 Costo: ${costo_info['costo_usd']} USD")
+
+    # Extraer JSON
+    json_text = response.content[0].text
+
+    # Limpiar markdown
+    if json_text.strip().startswith('```'):
+        json_text = json_text.strip()
+        lines = json_text.split('\n')
+        if lines[0].startswith('```'):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == '```':
+            lines = lines[:-1]
+        json_text = '\n'.join(lines)
+
+    print("\n" + "=" * 80)
+    print("📥 RESPUESTA CLAUDE (CON PSEUDÓNIMOS):")
+    print("=" * 80)
+    print(json_text[:500] + "..." if len(json_text) > 500 else json_text)
+    print("=" * 80 + "\n")
+
+    # Parsear JSON
+    datos = json.loads(json_text)
+
+    # ========== PASO 5: DES-PSEUDONIMIZAR DATOS ==========
+    print("🔓 Des-pseudonimizando datos...")
+
     try:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2500,
-            messages=[{"role": "user", "content": prompt}]
+        datos_reales = await pseudonym_client.depseudonymize_data(
+            datos,
+            session_id=session_id_usado
+        )
+        print("✅ Des-pseudonimización exitosa\n")
+        datos = datos_reales
+
+    except Exception as e:
+        raise Exception(
+            f"❌ Error en des-pseudonimización: {str(e)}\n"
+            f"Los datos están pseudonimizados y no se pueden recuperar.\n"
+            f"Session ID: {session_id_usado}"
         )
 
-        # Capturar tokens y calcular costo
-        usage = response.usage
-        print(f"\n📊 Tokens: {usage.input_tokens:,} input + {usage.output_tokens:,} output")
+    # ========== PASO 6: CONVERTIR FECHAS ==========
+    if 'fecha' in datos and isinstance(datos['fecha'], str):
+        datos['fecha'] = datetime.strptime(datos['fecha'], '%Y-%m-%d').date()
 
-        costo_info = {
-            "costo_usd": round(
-                (usage.input_tokens * 3.00 / 1_000_000) +
-                (usage.output_tokens * 15.00 / 1_000_000),
-                4
-            ),
-            "input_tokens": usage.input_tokens,
-            "output_tokens": usage.output_tokens,
-            "total_tokens": usage.input_tokens + usage.output_tokens,
-            "model": "claude-sonnet-4-20250514",
-            "pricing_date": "2025-01-29"
-        }
-        print(f"💰 Costo: ${costo_info['costo_usd']} USD")
+    if 'infraccion' in datos:
+        for campo_fecha in ['fecha_vencimiento_gfc', 'fecha_maxima_entrega_gfc', 'fecha_real_entrega']:
+            if campo_fecha in datos['infraccion'] and datos['infraccion'][campo_fecha]:
+                if isinstance(datos['infraccion'][campo_fecha], str):
+                    datos['infraccion'][campo_fecha] = datetime.strptime(
+                        datos['infraccion'][campo_fecha], '%Y-%m-%d'
+                    ).date()
 
-        # Extraer JSON
-        json_text = response.content[0].text
+    print("=" * 80)
+    print("✅ EXTRACCIÓN COMPLETADA CON ÉXITO")
+    print("=" * 80 + "\n")
 
-        # Limpiar markdown
-        if json_text.strip().startswith('```'):
-            json_text = json_text.strip()
-            lines = json_text.split('\n')
-            if lines[0].startswith('```'):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == '```':
-                lines = lines[:-1]
-            json_text = '\n'.join(lines)
-
-        print("\n" + "=" * 80)
-        print("📥 RESPUESTA CLAUDE (CON PSEUDÓNIMOS):")
-        print("=" * 80)
-        print(json_text[:500] + "..." if len(json_text) > 500 else json_text)
-        print("=" * 80 + "\n")
-
-        # Parsear JSON
-        datos = json.loads(json_text)
-
-        # ========== PASO 5: DES-PSEUDONIMIZAR DATOS ==========
-        print("🔓 Des-pseudonimizando datos...")
-
-        try:
-            # ⬇️ MODIFICADO: Pasar session_id al des-pseudonimizar
-            datos_reales = await pseudonym_client.depseudonymize_data(
-                datos,
-                session_id=session_id_usado  # ⬅️ NUEVO: Usar mismo session_id
-            )
-            print("✅ Des-pseudonimización exitosa\n")
-            datos = datos_reales
-
-        except Exception as e:
-            # Si falla la des-pseudonimización, es un error crítico
-            raise Exception(
-                f"❌ Error en des-pseudonimización: {str(e)}\n"
-                f"Los datos están pseudonimizados y no se pueden recuperar.\n"
-                f"Session ID: {session_id_usado}"
-            )
-
-        # ========== PASO 6: CONVERTIR FECHAS ==========
-        if 'fecha' in datos and isinstance(datos['fecha'], str):
-            datos['fecha'] = datetime.strptime(datos['fecha'], '%Y-%m-%d').date()
-
-        if 'infraccion' in datos:
-            for campo_fecha in ['fecha_vencimiento_gfc', 'fecha_maxima_entrega_gfc', 'fecha_real_entrega']:
-                if campo_fecha in datos['infraccion'] and datos['infraccion'][campo_fecha]:
-                    if isinstance(datos['infraccion'][campo_fecha], str):
-                        datos['infraccion'][campo_fecha] = datetime.strptime(
-                            datos['infraccion'][campo_fecha], '%Y-%m-%d'
-                        ).date()
-
-        print("=" * 80)
-        print("✅ EXTRACCIÓN COMPLETADA CON ÉXITO")
-        print("=" * 80 + "\n")
-
-        return datos, costo_info
-
-    except anthropic.APIError as e:
-        raise Exception(f"❌ Error en Claude API: {str(e)}")
-    except json.JSONDecodeError as e:
-        raise Exception(f"❌ Error parseando JSON: {str(e)}\nRespuesta: {json_text[:500]}")
+    return datos, costo_info
 
 
 def validar_datos(datos: dict) -> InformeTecnicoSchema:
@@ -412,7 +442,7 @@ def validar_datos(datos: dict) -> InformeTecnicoSchema:
 
 async def extraer_informe_tecnico(
         pdf_path: str,
-        session_id: Optional[str] = None  # ⬅️ NUEVO: Parámetro opcional
+        session_id: Optional[str] = None
 ) -> Tuple[InformeTecnicoSchema, dict]:
     """
     Función principal para extraer datos de Informe Técnico con PSEUDONIMIZACIÓN.
@@ -436,10 +466,10 @@ async def extraer_informe_tecnico(
     print(texto[:2000])
     print("\n...\n")
 
-    # 2. Extraer con Claude (con pseudonimización) - Pasar session_id
+    # 2. Extraer con Claude (con pseudonimización)
     datos, costo_info = await extraer_con_claude(
         texto,
-        session_id=session_id  # ⬅️ NUEVO: Pasar session_id
+        session_id=session_id
     )
 
     # 3. Validar datos
@@ -455,7 +485,7 @@ async def extraer_informe_tecnico(
 async def test_extractor(pdf_path: str, session_id: Optional[str] = None):
     """Función de test"""
     print("\n" + "=" * 60)
-    print("TEST EXTRACTOR CON PSEUDONIMIZACIÓN v4.0")
+    print("TEST EXTRACTOR CON PSEUDONIMIZACIÓN v4.1")
     print("=" * 60 + "\n")
 
     try:

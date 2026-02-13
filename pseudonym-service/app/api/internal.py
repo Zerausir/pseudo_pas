@@ -25,6 +25,7 @@ class PseudonymizeResponse(BaseModel):
     session_id: str
     mapping: Dict[str, str]
     pseudonyms_count: int
+    stats: dict
 
 
 class DepseudonymizeRequest(BaseModel):

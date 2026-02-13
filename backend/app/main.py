@@ -37,6 +37,7 @@ app.mount("/outputs", StaticFiles(directory=str(outputs_dir)), name="outputs")
 # Incluir routers
 app.include_router(
     procesador.router,
+    prefix="/api",
     tags=["procesador"]
 )
 

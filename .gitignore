@@ -305,3 +305,4 @@ extraccion_*.log
 # MANTENER DIRECTORIOS VACÍOS
 # ============================================
 !.gitkeep
+logs_pseudonym.txt

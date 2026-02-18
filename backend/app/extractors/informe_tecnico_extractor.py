@@ -4,7 +4,7 @@ Extractor de Informe Técnico usando Claude API con Pseudonimización.
 MODIFICADO para incluir pseudonimización de datos personales antes de enviar a Claude API.
 Cumple con LOPDP Ecuador Arts. 10.e, 33, 37.
 
-Versión: 4.1 - Retry logic para error 529 Overloaded
+Versión: 4.2 - Campos derivados calculados (dias_retraso, fecha_vencimiento_gfc)
 
 Autor: Iván Suárez
 Fecha: 2026-02-13
@@ -14,7 +14,7 @@ import json
 import asyncio
 import anthropic
 import PyPDF2
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Tuple, Dict, Optional
 from pathlib import Path
 from pydantic import BaseModel, Field, validator, ValidationError
@@ -115,8 +115,9 @@ async def extraer_con_claude(
     3. Mostrar y guardar texto pseudonimizado para auditoría
     4. Enviar texto pseudonimizado a Claude API (CON RETRY LOGIC)
     5. Recibir datos extraídos (con pseudónimos)
-    6. Des-pseudonimizar datos (valores reales)
-    7. Retornar datos reales
+    6. Calcular campos derivados (dias_retraso, fecha_vencimiento_gfc) si no vienen de Claude
+    7. Des-pseudonimizar datos (valores reales)
+    8. Retornar datos reales
 
     Args:
         texto_pdf: Texto extraído del PDF
@@ -385,6 +386,51 @@ REGLAS:
     # Parsear JSON
     datos = json.loads(json_text)
 
+    # ========== PASO 4.5: CALCULAR CAMPOS DERIVADOS ==========
+    # Documentos formato FO-DEAR-47 (2025) no incluyen fecha_vencimiento_gfc
+    # ni dias_retraso_extraido explícitamente — se calculan por ROTH Art. 204:
+    #   - dias_retraso = fecha_real_entrega - fecha_maxima_entrega_gfc
+    #   - fecha_vencimiento_gfc = fecha_maxima_entrega_gfc + 15 días
+    print("📐 Calculando campos derivados (si no vienen de Claude)...")
+
+    infraccion = datos.get('infraccion', {})
+
+    fecha_max_str = infraccion.get('fecha_maxima_entrega_gfc')
+    fecha_real_str = infraccion.get('fecha_real_entrega')
+
+    # Parsear fechas para cálculo (aún son strings en este punto)
+    fecha_max_dt = None
+    fecha_real_dt = None
+
+    if fecha_max_str:
+        try:
+            fecha_max_dt = datetime.strptime(fecha_max_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass
+
+    if fecha_real_str:
+        try:
+            fecha_real_dt = datetime.strptime(fecha_real_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass
+
+    # Calcular dias_retraso si no vino de Claude
+    if fecha_max_dt and fecha_real_dt and not infraccion.get('dias_retraso_extraido'):
+        dias = (fecha_real_dt - fecha_max_dt).days
+        if dias > 0:
+            infraccion['dias_retraso_extraido'] = dias
+            print(f"   ✅ dias_retraso_extraido calculado: {dias} días")
+        else:
+            print(f"   ℹ️  días calculado ≤ 0 ({dias}), no se asigna")
+
+    # Calcular fecha_vencimiento_gfc si no vino de Claude (= fecha_max + 15 días, ROTH Art. 204)
+    if fecha_max_dt and not infraccion.get('fecha_vencimiento_gfc'):
+        infraccion['fecha_vencimiento_gfc'] = (fecha_max_dt + timedelta(days=15)).isoformat()
+        print(f"   ✅ fecha_vencimiento_gfc calculada: {infraccion['fecha_vencimiento_gfc']} (ROTH Art. 204)")
+
+    datos['infraccion'] = infraccion
+    print("✅ Campos derivados procesados\n")
+
     # ========== PASO 5: DES-PSEUDONIMIZAR DATOS ==========
     print("🔓 Des-pseudonimizando datos...")
 
@@ -485,7 +531,7 @@ async def extraer_informe_tecnico(
 async def test_extractor(pdf_path: str, session_id: Optional[str] = None):
     """Función de test"""
     print("\n" + "=" * 60)
-    print("TEST EXTRACTOR CON PSEUDONIMIZACIÓN v4.1")
+    print("TEST EXTRACTOR CON PSEUDONIMIZACIÓN v4.2")
     print("=" * 60 + "\n")
 
     try:

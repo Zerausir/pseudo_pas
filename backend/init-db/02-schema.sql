@@ -309,20 +309,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =====================================================
--- DATOS DE EJEMPLO
--- =====================================================
-
-INSERT INTO prestadores (ruc, razon_social, representante_legal, provincia, emails)
-VALUES (
-    '1792554136001',
-    'TELECOMUNICACIONES WRIVERA RED S.A.',
-    'ZAMBRANO LOPEZ JAIR ALEJANDRO',
-    'Pichincha',
-    ARRAY['contacto@wrivera.com', 'admin@wrivera.com']
-)
-ON CONFLICT (ruc) DO NOTHING;
-
--- =====================================================
 -- VERIFICACIÓN
 -- =====================================================
 

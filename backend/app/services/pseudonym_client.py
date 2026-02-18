@@ -86,7 +86,9 @@ class PseudonymClient:
             logger.error(f"❌ Error al pseudonimizar: {e}")
             raise
 
-    async def depseudonymize_data(self, data: Dict) -> Dict:
+    async def depseudonymize_data(self, data: Dict, session_id: Optional[str] = None) -> Dict:
+        # Usar session_id proporcionado, o caer en self.session_id como fallback
+        effective_session_id = session_id or self.session_id
         """
         Des-pseudonimizar datos.
 
@@ -96,14 +98,12 @@ class PseudonymClient:
         Returns:
             dict: Datos con valores reales
         """
-        if not self.session_id:
+        if not effective_session_id:
             logger.warning("⚠️ No hay session_id, retornando datos sin cambios")
             return data
 
         try:
             import json
-
-            # Convertir dict a JSON string
             data_json_str = json.dumps(data, ensure_ascii=False, default=str)
 
             async with httpx.AsyncClient() as client:
@@ -111,7 +111,7 @@ class PseudonymClient:
                     f"{self.base_url}/internal/depseudonymize",
                     json={
                         "text": data_json_str,
-                        "session_id": self.session_id
+                        "session_id": effective_session_id  # ← usa el efectivo
                     },
                     timeout=30.0
                 )

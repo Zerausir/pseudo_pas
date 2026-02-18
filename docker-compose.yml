@@ -1,16 +1,15 @@
 services:
   # ===== BD PRINCIPAL (existente) =====
   postgres:
-    image: postgis/postgis:18-3.6-alpine
+    image: postgres:18-alpine
     container_name: arcotel_main_db
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATA: /var/lib/postgresql/data
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_ES.UTF-8"
     volumes:
-      - postgres-data:/var/lib/postgresql
+      - postgres-data:/var/lib/postgresql/data
       - ./backend/init-db:/docker-entrypoint-initdb.d:ro
     networks:
       - main_network
@@ -33,7 +32,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PSEUDONYM_PASSWORD}
       PGDATA: /var/lib/postgresql/data
     volumes:
-      - postgres-pseudonym-data:/var/lib/postgresql
+      - postgres-pseudonym-data:/var/lib/postgresql/data
       - ./pseudonym-service/init-db:/docker-entrypoint-initdb.d:ro
     networks:
       - pseudonym_network

@@ -371,6 +371,11 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
                     logger.warning(f"⚠️  Nombre detectado pero no encontrado en texto: {nombre_limpio}")
 
     # ========== CAPA 2: spaCy ==========
+    # v2.1.5 FIX: Usar buscar_y_reemplazar_variaciones en lugar de str.replace.
+    # spaCy normaliza MAYÚSCULAS → Title Case para detectar, pero el texto
+    # original sigue en MAYÚSCULAS. str.replace es case-sensitive → 0 reemplazos.
+    # buscar_y_reemplazar_variaciones usa re.IGNORECASE → funciona en ambos casos.
+    # Impacto en informes técnicos: NINGUNO (names ya en processed_values por Capa 1.5).
     logger.info("🔍 Capa 2: Detección con spaCy NER...")
 
     entidades_spacy = detectar_entidades_spacy(text)
@@ -400,22 +405,34 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
             redis_set(cache_key, pseudonym, ttl_seconds)
             stats['spacy_detections'] += 1
 
-        pseudonymized_text = pseudonymized_text.replace(original_value, pseudonym)
-        mapping[pseudonym] = original_value
-        processed_values.add(original_value)
-        stats['total_reemplazos'] += 1
+        # FIX v2.1.5: IGNORECASE via buscar_y_reemplazar_variaciones
+        variaciones = generar_variaciones_nombre(original_value)
+        pseudonymized_text, count = buscar_y_reemplazar_variaciones(
+            pseudonymized_text,
+            variaciones,
+            pseudonym
+        )
+
+        if count > 0:
+            logger.info(f"✅ spaCy: {original_value} → {pseudonym} ({count} reemplazos)")
+            mapping[pseudonym] = original_value
+            processed_values.add(original_value)
+            stats['total_reemplazos'] += count
+        else:
+            logger.warning(f"⚠️ spaCy detectó pero no reemplazó (posible falso positivo): {original_value}")
 
     # ========== CAPA 3: FIRMANTES ==========
     logger.info("🔍 Capa 3: Extrayendo FIRMANTES...")
 
     seccion_firmas = text[-2000:]
     patrones_firmantes = [
-        r'Elaborado\s+por:\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
-        r'Revisado\s+por:\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
-        r'Aprobado\s+por:\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
-        r'Ing\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
-        r'Econ\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
-        r'Dr\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Elaborado\\s+por:\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
+        r'Revisado\\s+por:\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
+        r'Aprobado\\s+por:\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
+        r'Ing\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
+        r'Econ\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
+        r'Dr\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
+        r'Mgs\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',  # FIX v2.1.6
     ]
 
     for patron in patrones_firmantes:

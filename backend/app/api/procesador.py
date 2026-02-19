@@ -576,7 +576,7 @@ async def procesar_archivos(request: ProcesarRequest):
                 # ⬇️ NUEVO: Pasar session_id al extractor
                 # NOTA: Si extraer_peticion_razonada no acepta session_id,
                 # necesitarás modificar el extractor para aceptarlo
-                resultado, costo_info = extraer_peticion_razonada(
+                resultado, costo_info = await extraer_peticion_razonada(
                     str(pdf_path),
                     session_id=request.session_id  # ⬅️ NUEVO
                 )

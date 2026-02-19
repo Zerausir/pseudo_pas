@@ -1,5 +1,5 @@
 """
-Servicio de pseudonimización - VERSIÓN 2.1.4 FINAL
+Servicio de pseudonimización - VERSIÓN 2.1.7
 
 HISTORIAL DE VERSIONES:
 - v2.0: Normalización mayúsculas, variaciones de nombres, 3 capas detección
@@ -7,35 +7,36 @@ HISTORIAL DE VERSIONES:
 - v2.1.1: FIX caracteres especiales (&, números, comas) en nombres
 - v2.1.2: FIX orden de reemplazo de variaciones (más larga a más corta)
 - v2.1.3: FIX búsqueda con \s+ para permitir saltos de línea entre palabras
-- v2.1.4 FINAL: FIX pseudonimización de direcciones desde encabezado
+- v2.1.4: FIX pseudonimización de direcciones desde encabezado
+- v2.1.5: FIX Capa 2 spaCy usa buscar_y_reemplazar_variaciones (IGNORECASE)
+- v2.1.6: FIX agregar Mgs. a patrones de firmantes (Capa 3)
+- v2.1.7: FIX tres bugs de implementación en informes técnicos
 
-CAMBIOS v2.1.4:
-- 🐛 FIX CRÍTICO: Direcciones NO se pseudonimizaban
-  Problema detectado: "Dirección: AV 12 DE OCTUBRE N24-437 Y CORDERO..." visible
-  Patrón anterior: Solo buscaba formato específico "PALABRA Y PALABRA, EDIFICIO NUM"
-  No funcionaba con: Múltiples palabras, abreviaturas (EDIF.), formato libre
-  Solución: Extracción contextual desde "Dirección:" hasta próximo campo
-  Patrón nuevo: r'(?:Dirección|DIRECCIÓN)\s*:\s*([...]+?)(?=Ciudad|Provincia|Correo)'
-  Sin variaciones: Direcciones se usan completas, no tienen variaciones lógicas
+CAMBIOS v2.1.7:
+- 🐛 BUG 1 FIX: Lookahead CIUDAD cortaba prematuramente en "CIUDADELA"
+  Solución: Agregar \b (word boundary) → (?=\s*Ciudad\b|CIUDAD\b|...)
+  Afectado: CTDG-GE-2022-0485
 
-CAMBIOS v2.1.3:
-- ✅ Patrón regex con \s+ en lugar de espacios literales
+- 🐛 BUG 2 FIX: Em dash (– U+2013) no estaba en clase de caracteres de dirección
+  Solución: Agregar \u2013 a la clase de caracteres
+  Afectados: CTDG-GE-2023-0255, CTDG-GE-2022-0169
 
-CAMBIOS v2.1.2:
-- ✅ Ordenar variaciones por longitud antes de reemplazar
+- 🐛 BUG 3 FIX: Teléfonos sin prefijo "0" no detectados (ej: "84337197")
+  Solución: Nuevo patrón 'telefono_campo' en patrones_encabezado con prefijo TELEFONO
+  Afectado: CTDG-GE-2022-0337
 
-CAMBIOS v2.1.1:
-- ✅ Soporte para ampersand (&), números, comas en nombres
+- 🐛 BUG 4 FIX: Doble backslash en patrones Capa 3 → nunca hacían match
+  Solución: Corregir a backslash simple en raw strings
+  Afectados: Todos los documentos (firmantes nunca detectados correctamente)
 
-PRECISIÓN ESPERADA: 99.9-100% (validado con 21 documentos + direcciones)
+- 🐛 BUG 5 FIX: telefono_campo procesado como NOMBRE en lugar de TELEFONO
+  Solución: Branch dedicado en el loop de patrones_encabezado
 
-COBERTURA VALIDADA:
-- Formatos de encabezado: 2/2 (100%)
-  * "PRESTADOR O CONCESIONARIO:" (95.2%)
-  * "Poseedor o no de Título Habilitante:" (4.8%)
-- Saltos de línea: 21/21 (100%)
-- Mayúsculas sostenidas: 21/21 (100%)
-- Caracteres especiales: Ampersand, números, comas
+HALLAZGOS DOCUMENTADOS (NO corregidos — para tesis):
+- Apellidos compuestos ecuatorianos (Catucuago, Guerrero Gualsaqui, etc.)
+  → Limitación de spaCy es_core_news_lg: cobertura insuficiente en corpus
+- Texto fragmentado por pypdf (MERC EDES, hotma il.com)
+  → Limitación del extractor de texto PDF al procesar columnas/tablas
 """
 import re
 import uuid
@@ -49,7 +50,7 @@ from app.services.spacy_detector import detectar_entidades_spacy
 
 logger = logging.getLogger(__name__)
 
-# Patrones Regex para datos ESTRUCTURADOS
+# Patrones Regex para datos ESTRUCTURADOS (Capa 1)
 PATTERNS = {
     'ruc': r'\b\d{13}\b',
     'cedula': r'\b\d{10}\b',
@@ -78,8 +79,7 @@ FRASES_EXCLUIDAS = {
 
 def normalizar_espacios(texto: str) -> str:
     """Normaliza espacios múltiples, tabs, newlines."""
-    texto_normalizado = re.sub(r'\s+', ' ', texto.strip())
-    return texto_normalizado
+    return re.sub(r'\s+', ' ', texto.strip())
 
 
 def generar_variaciones_nombre(nombre: str) -> List[str]:
@@ -132,34 +132,15 @@ def buscar_y_reemplazar_variaciones(
     """
     Busca todas las variaciones de un nombre y las reemplaza.
 
-    CRÍTICO v2.1.2: Ordena variaciones de MÁS LARGA a MÁS CORTA para evitar
-    reemplazos parciales cuando el nombre está dividido en líneas.
-
-    CRÍTICO v2.1.3: Permite que las palabras estén separadas por saltos de línea,
-    no solo espacios, para manejar nombres divididos en múltiples líneas.
-
-    Args:
-        texto: Texto donde buscar
-        variaciones: Lista de variaciones del nombre
-        pseudonimo: Pseudónimo a usar como reemplazo
-
-    Returns:
-        Tuple[str, int]: (texto_modificado, total_reemplazos)
+    CRÍTICO v2.1.2: Ordena variaciones de MÁS LARGA a MÁS CORTA.
+    CRÍTICO v2.1.3: Permite saltos de línea entre palabras (\s+).
     """
     texto_resultado = texto
     total_reemplazos = 0
 
-    # FIX v2.1.2: Ordenar variaciones de MÁS LARGA a MÁS CORTA
-    # Esto evita que "SANTOS ORELLANA ADRIAN" reemplace antes que
-    # "SANTOS ORELLANA ADRIAN ALEXANDER" en casos de nombres divididos
     variaciones_ordenadas = sorted(variaciones, key=len, reverse=True)
 
     for variacion in variaciones_ordenadas:
-        # FIX v2.1.3: Crear patrón que permita saltos de línea entre palabras
-        # Reemplaza espacios en la variación con \s+ para coincidir con
-        # cualquier cantidad de espacios en blanco (espacios, tabs, saltos de línea)
-        # Ejemplo: "SANTOS ORELLANA ADRIAN" → "SANTOS\s+ORELLANA\s+ADRIAN"
-        # Esto permite encontrar "SANTOS ORELLANA ADRIAN\nALEXANDER"
         variacion_flexible = re.escape(variacion).replace(r'\ ', r'\s+')
         patron = r'\b' + variacion_flexible + r'\b'
 
@@ -205,24 +186,13 @@ def is_exception(text: str) -> bool:
 
 async def pseudonymize_text(text: str, session_id: str) -> Dict:
     """
-    Pseudonimiza un texto usando HÍBRIDO v2.1.1 FINAL.
+    Pseudonimiza un texto usando arquitectura híbrida v2.1.7.
 
-    ARQUITECTURA DE 3 CAPAS:
-    1. Regex: Datos estructurados (RUC, cédula, email, teléfono)
-    2. Encabezado + Variaciones: Nombres de prestador y representante
-    3. spaCy NER: Nombres restantes con validación estricta
-    4. Firmantes: Extracción de sección de firmas
-
-    CORRECCIONES v2.1.1:
-    - Patrones regex con caracteres especiales (&, números, comas)
-    - Soporte completo para nombres de empresas complejos
-
-    Args:
-        text: Texto a pseudonimizar
-        session_id: ID de sesión para mapeo reversible
-
-    Returns:
-        Dict con texto pseudonimizado, mapping, y estadísticas
+    ARQUITECTURA DE 4 CAPAS:
+    1. Regex: Datos estructurados (RUC, cédula, email, teléfono estándar)
+    1.5. Encabezado: Nombres prestador/representante, dirección, teléfono sin prefijo
+    2. spaCy NER: Nombres restantes con validación estricta (IGNORECASE v2.1.5)
+    3. Firmantes: Extracción de sección de firmas
     """
     pseudonymized_text = text
     mapping = {}
@@ -283,99 +253,80 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
             processed_values.add(original_value)
             stats['total_reemplazos'] += 1
 
-    # ========== CAPA 1.5: ENCABEZADO (v2.1.1 FINAL) ==========
-    logger.info("🔍 Capa 1.5: Extrayendo nombres del ENCABEZADO (con variaciones + FIX caracteres especiales)...")
+    # ========== CAPA 1.5: ENCABEZADO ==========
+    logger.info("🔍 Capa 1.5: Extrayendo datos del ENCABEZADO...")
 
-    # ⬇️ FIX v2.1: Normalizar saltos de línea en el encabezado
     encabezado = text[:1500]
     encabezado_normalizado = encabezado.replace('\n', ' ')
     encabezado_normalizado = re.sub(r'\s+', ' ', encabezado_normalizado)
 
-    # ⬇️ FIX v2.1.1: Patrones con caracteres especiales completos
     patrones_encabezado = {
-        # Acepta: "PRESTADOR O CONCESIONARIO:" o "Poseedor o no de Título Habilitante:"
-        # NUEVO v2.1.1: Clase de caracteres ampliada:
-        # - a-z: minúsculas (por si acaso)
-        # - 0-9: números en nombres (ej: "G4S", "3M")
-        # - &: ampersand (ej: "SERVICIOS&TELECOMUNICACIONES")
-        # - ,: comas (ej: "TELECOMUNICACIONES, MEDIOS Y ENTRETENIMIENTO")
         'prestador': r'(?:PRESTADOR\s+O\s+CONCESIONARIO|Poseedor\s+o\s+no.*?Habilitante)\s*:\s*([A-Za-záéíóúñÑ0-9\s\-\.&,]+?)(?=\s*Representante|REPRESENTANTE|Cédula|CEDULA|RUC)',
-
-        # Representante legal - mismo patrón ampliado
         'representante': r'REPRESENTANTE\s+LEGAL\s*:\s*([A-Za-záéíóúñÑ0-9\s\-\.&,]+?)(?=\s*Cédula|CEDULA|RUC)',
-
-        # Dirección - NUEVO v2.1.4
-        # Captura desde "Dirección:" hasta "Ciudad:" o "Provincia:" o "Correo"
-        # Incluye: letras, números, espacios, guiones, puntos, comas
-        # Ejemplo: "AV 12 DE OCTUBRE N24-437 Y CORDERO EDIF. PUERTO DE PALO PB"
-        'direccion': r'(?:Dirección|Direccion|DIRECCIÓN|DIRECCION)\s*:\s*([A-Za-záéíóúñÑ0-9\s\-\.&,/]+?)(?=\s*Ciudad|CIUDAD|Provincia|PROVINCIA|Correo|CORREO|$)',
+        # v2.1.7 BUG 1: \b evita match prematuro con "CIUDADELA"
+        # v2.1.7 BUG 2: \u2013 captura em dash (–) en direcciones ecuatorianas
+        'direccion': r'(?:Dirección|Direccion|DIRECCIÓN|DIRECCION)\s*:\s*([A-Za-záéíóúñÑ0-9\s\-\u2013\.&,/]+?)(?=\s*Ciudad\b|CIUDAD\b|Provincia\b|PROVINCIA\b|Correo\b|CORREO\b|$)',
+        # v2.1.7 BUG 3: Teléfonos sin prefijo "0" (ej: "TELÉFONO: 84337197")
+        'telefono_campo': r'(?:TELÉFONO|TELEFONO|Teléfono|Telefono)\s*[:\s]+(\d{7,10})(?:\s*/\s*\d{7,10})?',
     }
 
     for contexto, patron in patrones_encabezado.items():
-        # Buscar en texto normalizado (sin saltos de línea)
         match = re.search(patron, encabezado_normalizado, re.IGNORECASE | re.MULTILINE)
 
         if match:
             nombre_original = match.group(1).strip()
             nombre_limpio = normalizar_espacios(nombre_original).strip('.')
-
-            # Limpiar caracteres extraños al final (comas, guiones sueltos)
             nombre_limpio = re.sub(r'[\s,\-\.]+$', '', nombre_limpio)
 
-            if len(nombre_limpio) >= 10:
-                # Para direcciones, NO generar variaciones (es una dirección completa)
-                # Para nombres, SÍ generar variaciones
-                if contexto == 'direccion':
-                    variaciones = [nombre_limpio]  # Solo la dirección completa
-                    logger.info(f"   📝 Dirección detectada: {nombre_limpio[:50]}...")
-                else:
-                    # Generar TODAS las variaciones para nombres
-                    variaciones = generar_variaciones_nombre(nombre_limpio)
-                    logger.info(f"   📝 Nombre base ({contexto}): {nombre_limpio}")
-                    logger.info(f"   🔀 Variaciones generadas: {len(variaciones)}")
+            longitud_minima = 5 if contexto == 'telefono_campo' else 10
+            if len(nombre_limpio) < longitud_minima:
+                continue
 
-                # Verificar si ya existe
-                data_type = f"nombre_encabezado_{contexto}"
-                cache_key = f"{session_id}:{data_type}:{nombre_limpio}"
-                cached_pseudonym = redis_get(cache_key)
+            data_type = f"encabezado_{contexto}"
+            cache_key = f"{session_id}:{data_type}:{nombre_limpio}"
+            cached_pseudonym = redis_get(cache_key)
 
-                if cached_pseudonym:
-                    pseudonym = cached_pseudonym
-                    logger.debug(f"   ♻️  Reutilizando pseudónimo: {pseudonym}")
-                else:
-                    # Usar prefijo apropiado según el tipo
-                    if contexto == 'direccion':
-                        pseudonym = generate_pseudonym("DIRECCION")
-                    else:
-                        pseudonym = generate_pseudonym("NOMBRE")
-                    encrypted_value = encrypt(nombre_limpio)
-                    reverse_key = f"{session_id}:reverse:{pseudonym}"
-                    ttl_seconds = settings.TTL_HOURS * 3600
-                    redis_set(reverse_key, encrypted_value, ttl_seconds)
-                    redis_set(cache_key, pseudonym, ttl_seconds)
-                    stats['encabezado_detections'] += 1
+            # v2.1.7 BUG 5: branch dedicado para telefono_campo y direccion
+            if contexto == 'telefono_campo':
+                variaciones = [nombre_limpio]
+                prefix = 'TELEFONO'
+            elif contexto == 'direccion':
+                variaciones = [nombre_limpio]
+                prefix = 'DIRECCION'
+            else:
+                variaciones = generar_variaciones_nombre(nombre_limpio)
+                prefix = 'NOMBRE'
+                logger.info(f"   📝 Nombre base ({contexto}): {nombre_limpio}")
+                logger.info(f"   🔀 Variaciones generadas: {len(variaciones)}")
 
-                # Buscar y reemplazar TODAS las variaciones
-                pseudonymized_text, count = buscar_y_reemplazar_variaciones(
-                    pseudonymized_text,
-                    variaciones,
-                    pseudonym
-                )
+            if cached_pseudonym:
+                pseudonym = cached_pseudonym
+                logger.debug(f"   ♻️  Reutilizando pseudónimo: {pseudonym}")
+            else:
+                pseudonym = generate_pseudonym(prefix)
+                encrypted_value = encrypt(nombre_limpio)
+                reverse_key = f"{session_id}:reverse:{pseudonym}"
+                ttl_seconds = settings.TTL_HOURS * 3600
+                redis_set(reverse_key, encrypted_value, ttl_seconds)
+                redis_set(cache_key, pseudonym, ttl_seconds)
+                stats['encabezado_detections'] += 1
 
-                if count > 0:
-                    logger.info(f"✅ Encabezado ({contexto}): {nombre_limpio} → {pseudonym} ({count} reemplazos)")
-                    mapping[pseudonym] = nombre_limpio
-                    processed_values.add(nombre_limpio)
-                    stats['total_reemplazos'] += count
-                else:
-                    logger.warning(f"⚠️  Nombre detectado pero no encontrado en texto: {nombre_limpio}")
+            pseudonymized_text, count = buscar_y_reemplazar_variaciones(
+                pseudonymized_text,
+                variaciones,
+                pseudonym
+            )
+
+            if count > 0:
+                logger.info(f"✅ Encabezado ({contexto}): {nombre_limpio} → {pseudonym} ({count} reemplazos)")
+                mapping[pseudonym] = nombre_limpio
+                processed_values.add(nombre_limpio)
+                stats['total_reemplazos'] += count
+            else:
+                logger.warning(f"⚠️  Dato detectado pero no encontrado en texto: {nombre_limpio}")
 
     # ========== CAPA 2: spaCy ==========
-    # v2.1.5 FIX: Usar buscar_y_reemplazar_variaciones en lugar de str.replace.
-    # spaCy normaliza MAYÚSCULAS → Title Case para detectar, pero el texto
-    # original sigue en MAYÚSCULAS. str.replace es case-sensitive → 0 reemplazos.
-    # buscar_y_reemplazar_variaciones usa re.IGNORECASE → funciona en ambos casos.
-    # Impacto en informes técnicos: NINGUNO (names ya en processed_values por Capa 1.5).
+    # v2.1.5: buscar_y_reemplazar_variaciones reemplaza str.replace (IGNORECASE)
     logger.info("🔍 Capa 2: Detección con spaCy NER...")
 
     entidades_spacy = detectar_entidades_spacy(text)
@@ -405,7 +356,6 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
             redis_set(cache_key, pseudonym, ttl_seconds)
             stats['spacy_detections'] += 1
 
-        # FIX v2.1.5: IGNORECASE via buscar_y_reemplazar_variaciones
         variaciones = generar_variaciones_nombre(original_value)
         pseudonymized_text, count = buscar_y_reemplazar_variaciones(
             pseudonymized_text,
@@ -422,17 +372,19 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
             logger.warning(f"⚠️ spaCy detectó pero no reemplazó (posible falso positivo): {original_value}")
 
     # ========== CAPA 3: FIRMANTES ==========
+    # v2.1.6: Agrega Mgs. a patrones
+    # v2.1.7 BUG 4: Corregido doble backslash → nunca hacían match
     logger.info("🔍 Capa 3: Extrayendo FIRMANTES...")
 
     seccion_firmas = text[-2000:]
     patrones_firmantes = [
-        r'Elaborado\\s+por:\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
-        r'Revisado\\s+por:\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
-        r'Aprobado\\s+por:\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
-        r'Ing\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
-        r'Econ\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
-        r'Dr\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',
-        r'Mgs\\.\\s+([A-Za-záéíóúñÑ\\s\\.]+?)(?=\\n|\\s{2,})',  # FIX v2.1.6
+        r'Elaborado\s+por:\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Revisado\s+por:\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Aprobado\s+por:\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Ing\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Econ\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Dr\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',
+        r'Mgs\.\s+([A-Za-záéíóúñÑ\s\.]+?)(?=\n|\s{2,})',  # v2.1.6
     ]
 
     for patron in patrones_firmantes:
@@ -482,16 +434,7 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
 
 
 async def depseudonymize_text(text: str, session_id: str) -> Dict:
-    """
-    Revierte la pseudonimización.
-
-    Args:
-        text: Texto pseudonimizado
-        session_id: ID de sesión para obtener el mapeo reverso
-
-    Returns:
-        Dict con texto original
-    """
+    """Revierte la pseudonimización."""
     original_text = text
 
     pseudonym_pattern = r'\b[A-Z]+_[A-F0-9]{8}\b'
@@ -513,15 +456,7 @@ async def depseudonymize_text(text: str, session_id: str) -> Dict:
 
 
 async def cleanup_session(session_id: str):
-    """
-    Elimina todos los datos de una sesión.
-
-    Args:
-        session_id: ID de sesión a limpiar
-
-    Returns:
-        Dict con status y session_id
-    """
+    """Elimina todos los datos de una sesión."""
     try:
         pattern = f"{session_id}:*"
         delete_pattern(pattern)

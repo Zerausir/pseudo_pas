@@ -131,15 +131,13 @@ async def extraer_con_claude(
     Raises:
         Exception: Si pseudonimización falla o no está disponible
 
-    Versión: 4.5
-    Cambios respecto a 4.4:
-      - Eliminado "obligaciones_economicas" del enum tipo (ese tipo de informe está fuera
-        del alcance del TFE; si llega uno, Claude devuelve null y el sistema lo rechaza)
-      - Agregada lógica de validación por fechas: si existen fecha_maxima_entrega_gfc
-        y fecha_real_entrega en el documento, Claude las usa para CONFIRMAR o CORREGIR
-        el tipo inferido del texto. Las fechas son datos objetivos y tienen prioridad
-        sobre redacción ambigua. Esto resuelve el caso CTDGGE20230096 (solo tabla, sin
-        texto explícito en conclusiones).
+    Versión: 4.6
+    Cambios respecto a 4.5:
+      - articulos_violados ahora se extrae SOLO de sección 3.2 Análisis y Conclusiones,
+        NO de 3.1 Norma Verificada/Controlada. La sección 3.1 transcribe el marco legal
+        completo (incluye Art 208 para redes privadas que no aplica a casos SAI).
+        Fix para bug sistemático donde Art 208 se incluía incorrectamente y Art 207
+        se omitía en informes de tipo garantia_gfc_tardia.
     """
     print("\n" + "=" * 80)
     print("🤖 INICIANDO EXTRACCIÓN CON CLAUDE API (CON PSEUDONIMIZACIÓN OBLIGATORIA)")
@@ -258,7 +256,7 @@ async def extraer_con_claude(
     client = anthropic.Anthropic(api_key=api_key)
 
     # ============================================================
-    # PROMPT v4.5 — ANÁLISIS DE 22 INFORMES TÉCNICOS REALES (ARCOTEL 2022-2025):
+    # PROMPT v4.6 — ANÁLISIS DE 22 INFORMES TÉCNICOS REALES (ARCOTEL 2022-2025):
     #
     # Distribución de tipos en scope del TFE:
     #   - garantia_gfc_tardia:        13 docs
@@ -276,6 +274,10 @@ async def extraer_con_claude(
     #   PASO 1: texto de conclusiones → tipo candidato
     #   PASO 2: fechas (si existen) → confirman o corrigen el candidato
     #   Las fechas son datos objetivos; tienen prioridad sobre redacción ambigua.
+    #
+    # Fix v4.6:
+    #   articulos_violados: extraer SOLO de sección 3.2 Análisis y Conclusiones.
+    #   La sección 3.1 Norma incluye Art 208 (redes privadas) que no aplica a casos SAI.
     # ============================================================
     prompt = f"""Eres un experto en extracción de datos de documentos legales de ARCOTEL.
 
@@ -350,10 +352,18 @@ PASO 2 — Si el documento contiene fecha_maxima_entrega_gfc Y fecha_real_entreg
 NUNCA uses el texto libre del asunto o título del documento para este campo.
 
 === REGLA: CAMPO articulos_violados ===
-Extrae TODOS los artículos mencionados en el documento. Busca en ESTAS secciones:
-  1. Sección "3.1 NORMA VERIFICADA" o "2.1 NORMA CONTROLADA" — artículos transcritos
-  2. Sección "3.2 ANÁLISIS" o "2.2 ANÁLISIS" — artículos mencionados en el texto analítico
-  3. Sección "4. CONCLUSIONES" o "5. CONCLUSIONES" — artículos citados al final
+Extrae ÚNICAMENTE los artículos que el documento aplica AL CASO ESPECÍFICO.
+La sección "3.1 NORMA VERIFICADA/CONTROLADA" transcribe artículos como marco legal general
+— IGNORA esa sección para este campo.
+
+Busca SOLO en estas secciones:
+  1. Sección "3.2 ANÁLISIS" o "2.2 ANÁLISIS" — artículos citados en el análisis del caso
+  2. Sección "4. CONCLUSIONES" o "5. CONCLUSIONES" — artículos citados al concluir
+
+Ejemplo: si en 3.2 Análisis dice "artículos 204, 206, 207 y 210 y la Disposición General quinta",
+extrae exactamente esos: ["LOT Art 24", "ROTH Art 204", "ROTH Art 206", "ROTH Art 207",
+"ROTH Art 210", "ROTH Disposición General Quinta"].
+NO incluyas Art 208 aunque aparezca transcrito en 3.1, si no está en 3.2 ni en conclusiones.
 
 Formato de cada artículo: "PREFIJO Art NÚM"
 Ejemplos: "LOT Art 24", "ROTH Art 204", "ROTH Art 206", "ROTH Art 207", "ROTH Art 210"

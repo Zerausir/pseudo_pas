@@ -123,12 +123,23 @@ async def extraer_con_claude(
         texto_pdf: Texto extraído del PDF
         session_id: Session ID de validación previa (opcional)
                    Si se proporciona, reutiliza esa sesión de pseudonimización
+                   garantizando que los datos coincidan con lo que el usuario validó
 
     Returns:
         Tuple[dict, dict]: (datos_extraidos, info_costo)
 
     Raises:
         Exception: Si pseudonimización falla o no está disponible
+
+    Versión: 4.5
+    Cambios respecto a 4.4:
+      - Eliminado "obligaciones_economicas" del enum tipo (ese tipo de informe está fuera
+        del alcance del TFE; si llega uno, Claude devuelve null y el sistema lo rechaza)
+      - Agregada lógica de validación por fechas: si existen fecha_maxima_entrega_gfc
+        y fecha_real_entrega en el documento, Claude las usa para CONFIRMAR o CORREGIR
+        el tipo inferido del texto. Las fechas son datos objetivos y tienen prioridad
+        sobre redacción ambigua. Esto resuelve el caso CTDGGE20230096 (solo tabla, sin
+        texto explícito en conclusiones).
     """
     print("\n" + "=" * 80)
     print("🤖 INICIANDO EXTRACCIÓN CON CLAUDE API (CON PSEUDONIMIZACIÓN OBLIGATORIA)")
@@ -213,7 +224,6 @@ async def extraer_con_claude(
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     try:
-        # Crear archivo temporal en el contenedor
         temp_dir = "/tmp/claude_inputs"
         os.makedirs(temp_dir, exist_ok=True)
         temp_file = f"{temp_dir}/input_{session_id_usado}_{timestamp}.txt"
@@ -247,6 +257,26 @@ async def extraer_con_claude(
 
     client = anthropic.Anthropic(api_key=api_key)
 
+    # ============================================================
+    # PROMPT v4.5 — ANÁLISIS DE 22 INFORMES TÉCNICOS REALES (ARCOTEL 2022-2025):
+    #
+    # Distribución de tipos en scope del TFE:
+    #   - garantia_gfc_tardia:        13 docs
+    #   - garantia_gfc_no_presentada:  8 docs
+    #   - (obligaciones_economicas):   1 doc → fuera de scope, Claude devuelve null
+    #
+    # Patrones reales en CONCLUSIONES:
+    #   - "ha presentado... sin dar cumplimiento" (SIN "NO"):  10 docs → tardia
+    #   - "NO ha presentado... sin dar cumplimiento":           3 docs → no_presentada
+    #   - "no ha presentado" (standalone):                     3 docs → no_presentada
+    #   - "fuera de término":                                  2 docs → tardia
+    #   - tabla fechas solo (sin texto explícito):             1 doc  → tardia (por fechas)
+    #
+    # Lógica PASO 1 + PASO 2:
+    #   PASO 1: texto de conclusiones → tipo candidato
+    #   PASO 2: fechas (si existen) → confirman o corrigen el candidato
+    #   Las fechas son datos objetivos; tienen prioridad sobre redacción ambigua.
+    # ============================================================
     prompt = f"""Eres un experto en extracción de datos de documentos legales de ARCOTEL.
 
 REGLA DE ORO: SOLO EXTRAES datos que aparezcan EXPLÍCITAMENTE en el documento.
@@ -267,27 +297,76 @@ FORMATO JSON ESPERADO:
         "nombre": "string (puede ser NOMBRE_XXXXXXXX si está pseudonimizado)",
         "nombre_comercial": "string o null",
         "ruc": "string (puede ser CEDULA_XXXXXXXX o RUC_XXXXXXXX si está pseudonimizado)",
-        "representante_legal": "string o null (puede ser NOMBRE_XXXXXXXX)",
+        "representante_legal": "string o null (puede ser NOMBRE_XXXXXXXX). Si dice N/A usa null.",
         "emails": ["EMAIL_XXXXXXXX o email real"]
     }},
     "infraccion": {{
-        "tipo": "string",
+        "tipo": "<VALOR DEL ENUM — ver regla TIPO más abajo>",
         "hecho": "string",
         "fecha_vencimiento_gfc": "YYYY-MM-DD o null",
         "fecha_maxima_entrega_gfc": "YYYY-MM-DD o null",
         "fecha_real_entrega": "YYYY-MM-DD o null",
         "dias_retraso_extraido": numero o null,
-        "articulos_violados": ["LOT Art X", "ROTH Art Y"]
+        "articulos_violados": ["LOT Art X", "ROTH Art Y", ...]
     }}
 }}
 
-REGLAS:
+=== REGLA: CAMPO tipo ===
+DEBES usar EXACTAMENTE uno de estos DOS valores (sin variaciones de texto):
+  "garantia_gfc_tardia"        — El prestador SÍ presentó la GFC pero FUERA del plazo
+  "garantia_gfc_no_presentada" — El prestador NO presentó la GFC
+
+Si el documento trata sobre tarifas, pagos u obligaciones económicas (distinto de GFC),
+usa null — ese tipo de informe está fuera del alcance del sistema.
+
+PASO 1 — Lee la CONCLUSIÓN (sección 4 o 5 según el documento) y determina un tipo candidato:
+
+→ Candidato "garantia_gfc_tardia" si encuentras ALGUNO de estos:
+   • "presentó... fuera de término" o "entregó... fuera de término"
+   • "ha presentado... sin dar cumplimiento" (ATENCIÓN: sin la palabra NO antes de "ha presentado")
+
+→ Candidato "garantia_gfc_no_presentada" si encuentras ALGUNO de estos:
+   • "no ha presentado" / "NO ha presentado" / "no presentó"
+   • "NO ha presentado... sin dar cumplimiento" (con NO explícito antes de "ha presentado")
+
+⚠️ ARTEFACTO OCR FRECUENTE: El PDF puede unir palabras por error de OCR.
+   Ejemplo: "RADIOELECTRICONO ha presentado" → es "RADIOELECTRICO" + "NO ha presentado"
+   → candidato: "garantia_gfc_no_presentada"
+
+PASO 2 — Si el documento contiene fecha_maxima_entrega_gfc Y fecha_real_entrega,
+úsalas para CONFIRMAR o CORREGIR el candidato del Paso 1:
+
+   • fecha_real_entrega EXISTE y es POSTERIOR a fecha_maxima_entrega_gfc
+     → confirma o corrige a "garantia_gfc_tardia"
+     (el prestador sí entregó pero tarde)
+
+   • fecha_real_entrega es NULL o NO aparece en el documento
+     → confirma o corrige a "garantia_gfc_no_presentada"
+     (no hay evidencia de entrega)
+
+   Las fechas son datos objetivos. Si contradicen el texto, PRIORIZA las fechas.
+   Si no existen fechas en el documento, usa solo el resultado del Paso 1.
+
+NUNCA uses el texto libre del asunto o título del documento para este campo.
+
+=== REGLA: CAMPO articulos_violados ===
+Extrae TODOS los artículos mencionados en el documento. Busca en ESTAS secciones:
+  1. Sección "3.1 NORMA VERIFICADA" o "2.1 NORMA CONTROLADA" — artículos transcritos
+  2. Sección "3.2 ANÁLISIS" o "2.2 ANÁLISIS" — artículos mencionados en el texto analítico
+  3. Sección "4. CONCLUSIONES" o "5. CONCLUSIONES" — artículos citados al final
+
+Formato de cada artículo: "PREFIJO Art NÚM"
+Ejemplos: "LOT Art 24", "ROTH Art 204", "ROTH Art 206", "ROTH Art 207", "ROTH Art 210"
+Incluye Disposiciones Generales si aparecen: "ROTH Disposición General Quinta"
+NO incluyas artículos del Estatuto Orgánico ni de resoluciones internas.
+El array NO debe tener duplicados.
+
+REGLAS GENERALES:
 1. Fechas SIEMPRE en formato YYYY-MM-DD
-2. RUC: Extraer tal cual (puede ser pseudónimo)
-3. emails: ARRAY (aunque sea 1 solo)
-4. articulos_violados: Incluir prefijo de ley (LOT, ROTH, etc.)
-5. dias_retraso_extraido: SOLO si aparece textualmente
-6. NO intentes "descifrar" los pseudónimos - extráelos tal cual
+2. RUC: Extraer tal cual (puede ser pseudónimo CEDULA_XXXXXXXX)
+3. emails: ARRAY aunque sea 1 solo. Array vacío [] si no hay.
+4. dias_retraso_extraido: SOLO si aparece textualmente como número en el doc
+5. NO intentes "descifrar" los pseudónimos — extráelos tal cual
 
 === TEXTO DEL INFORME ===
 
@@ -387,10 +466,8 @@ REGLAS:
     datos = json.loads(json_text)
 
     # ========== PASO 4.5: CALCULAR CAMPOS DERIVADOS ==========
-    # Documentos formato FO-DEAR-47 (2025) no incluyen fecha_vencimiento_gfc
-    # ni dias_retraso_extraido explícitamente — se calculan por ROTH Art. 204:
-    #   - dias_retraso = fecha_real_entrega - fecha_maxima_entrega_gfc
-    #   - fecha_vencimiento_gfc = fecha_maxima_entrega_gfc + 15 días
+    # dias_retraso y fecha_vencimiento_gfc son campos CALCULADOS, no extraídos.
+    # Se derivan de fecha_maxima_entrega_gfc según ROTH Art. 204.
     print("📐 Calculando campos derivados (si no vienen de Claude)...")
 
     infraccion = datos.get('infraccion', {})
@@ -398,7 +475,6 @@ REGLAS:
     fecha_max_str = infraccion.get('fecha_maxima_entrega_gfc')
     fecha_real_str = infraccion.get('fecha_real_entrega')
 
-    # Parsear fechas para cálculo (aún son strings en este punto)
     fecha_max_dt = None
     fecha_real_dt = None
 

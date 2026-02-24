@@ -1,0 +1,97 @@
+=================================================================
+  MÉTRICAS DE PSEUDONIMIZACIÓN — SISTEMA ARCOTEL PAS
+  TFE — Iván | 2026
+=================================================================
+
+📊 TABLA 1: MÉTRICAS GLOBALES DEL SISTEMA
+-----------------------------------------------------------------
+  Entidades reales (VP+FN): 307
+  VP (pseudonimizados):     303
+  FN (no pseudonimizados):  4
+  FP (pseudonimización errónea): 0
+  Precision:  100.0%
+  Recall:     98.7%
+  F1-Score:   99.3%
+
+📊 TABLA 2: MÉTRICAS POR COMPONENTE (CAPA)
+-----------------------------------------------------------------
+  Componente                            VP   FN     P%     R%    F1%
+  ------------------------------------------------------------
+  Regex (datos estructurados)           54    0  100.0  100.0  100.0
+  Contextual (encabezado)               20    1  100.0   95.2   97.6
+  spaCy NER                            229    3  100.0   98.7   99.3
+  Firmantes (regex)                      0    0    0.0    0.0    0.0
+
+📊 TABLA 3: MÉTRICAS POR TIPO DE ENTIDAD
+-----------------------------------------------------------------
+  Tipo         Total real   VP   FN     P%     R%    F1%  Capa principal
+  ------------------------------------------------------------
+  CEDULA               11   11    0  100.0  100.0  100.0  Capa 1 (regex)
+  DIRECCION            21   20    1  100.0   95.2   97.6  Capa 1.5 (contextual)
+  EMAIL                30   30    0  100.0  100.0  100.0  Capa 1 (regex)
+  NOMBRE              232  229    3  100.0   98.7   99.3  Capa 2 (spaCy NER)
+  RUC                  12   12    0  100.0  100.0  100.0  Capa 1 (regex)
+  TELEFONO              1    1    0  100.0  100.0  100.0  Capa 1 (regex) / 1.5 (contextual)
+
+📋 TABLA 4: RESUMEN POR DOCUMENTO
+-----------------------------------------------------------------
+  Total documentos evaluados: 44
+  Pseudonimización completa:  41/44 (93.2%)
+  Pseudonimización parcial:   3/44 (6.8%)
+
+  CCDS-PR-2022-0212                   ✅ Completo
+  CCDS-PR-2022-0377                   ✅ Completo
+  CCDS-PR-2022-0386                   ✅ Completo
+  CCDS-PR-2022-269                    ✅ Completo
+  CCDS-PR-2022-272                    ✅ Completo
+  CCDS-PR-2022-400                    ✅ Completo
+  CCDS-PR-2022-412                    ✅ Completo
+  CCDS-PR-2022-414                    ✅ Completo
+  CCDS-PR-2023-0005                   ✅ Completo
+  CCDS-PR-2023-0008                   ✅ Completo
+  CCDS-PR-2023-0011                   ✅ Completo
+  CCDS-PR-2023-0012                   ✅ Completo
+  CCDS-PR-2023-0018                   ✅ Completo
+  CCDS-PR-2023-0021                   ✅ Completo
+  CCDS-PR-2023-0022                   ✅ Completo
+  CCDS-PR-2023-0030                   ✅ Completo
+  CCDS-PR-2023-0036                   ✅ Completo
+  CCDS-PR-2023-0090                   ✅ Completo
+  CCDS-PR-2023-0156                   ✅ Completo
+  CCDS-PR-2023-0194                   ✅ Completo
+  CTDG-2024-GE-0032                   ✅ Completo
+  CTDG-2025-GE-0335                   ✅ Completo
+  CTDG-GE-2022-0169                   ⚠️  Parcial (1 FN)
+    └─ FN: -406 E HIGUERAS EDIF. GRUPO TVCABLE
+  CTDG-GE-2022-0299                   ⚠️  Parcial (1 FN)
+    └─ FN: Ana
+  CTDG-GE-2022-0337                   ⚠️  Parcial (2 FN)
+    └─ FN: JUMBO
+    └─ FN: JUMBO DA RIO XAVIER
+  CTDG-GE-2022-0382                   ✅ Completo
+  CTDG-GE-2022-0392                   ✅ Completo
+  CTDG-GE-2022-0435                   ✅ Completo
+  CTDG-GE-2022-0449                   ✅ Completo
+  CTDG-GE-2022-0456                   ✅ Completo
+  CTDG-GE-2022-0461                   ✅ Completo
+  CTDG-GE-2022-0473                   ✅ Completo
+  CTDG-GE-2022-0480                   ✅ Completo
+  CTDG-GE-2022-0483                   ✅ Completo
+  CTDG-GE-2022-0485                   ✅ Completo
+  CTDG-GE-2022-0487                   ✅ Completo
+  CTDG-GE-2022-0488                   ✅ Completo
+  CTDG-GE-2022-0490                   ✅ Completo
+  CTDG-GE-2023-0041                   ✅ Completo
+  CTDG-GE-2023-0096                   ✅ Completo
+  CTDG-GE-2023-0197                   ✅ Completo
+  CTDG-GE-2023-0255                   ✅ Completo
+  PR-CTDG-2024-GE-0032                ✅ Completo
+  PR-CTDG-2025-GE-0335                ✅ Completo
+
+📌 NOTA METODOLÓGICA
+-----------------------------------------------------------------
+  FP = 0 asumido. El sistema no pseudonimizó texto institucional
+  (ARCOTEL, Ley Orgánica, etc.) gracias a la lista de excepciones.
+  Los VP de NOMBRE (Capa 2) incluyen también nombres detectados
+  por Capa 1.5 y Capa 3. Limitación metodológica documentada.
+=================================================================

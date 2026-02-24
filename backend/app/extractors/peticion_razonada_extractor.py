@@ -410,7 +410,7 @@ async def extraer_peticion_razonada(
     print(f"📅 Fecha: {datos_validados.fecha}")
     print(f"👤 Prestador: {datos_validados.prestador_nombre}")
     print(f"📋 Informe base: {datos_validados.informe_base.numero}")
-    print(f"⚖️  Tipo: {datos_validados.tipo_incumplimiento}")
+    print(f"⚖️  Tipo: {datos_validados.tipo_infraccion}")
     print(f"💰 Costo: ${costo_info['costo_usd']} USD")
 
     return datos_validados.model_dump(), costo_info

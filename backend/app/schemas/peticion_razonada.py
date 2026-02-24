@@ -60,7 +60,7 @@ class PeticionRazonadaSchema(BaseModel):
     """
     numero: str
     fecha: date
-    unidad_emisora: str  # CCDS, CCDE, CTDG, etc.
+    unidad_emisora: Optional[str] = None  # CCDS, CCDE, CTDG, etc.
 
     # Prestador (puede ser empresa o persona natural)
     prestador_nombre: str
@@ -121,9 +121,10 @@ class PeticionRazonadaSchema(BaseModel):
     @validator('unidad_emisora')
     def validar_unidad(cls, v):
         """Validar que sea una unidad conocida de ARCOTEL."""
+        if v is None:
+            return v  # ✅ permitir None
         unidades_validas = ['CCDS', 'CCDE', 'CTDG', 'CTHB', 'CCON']
         if v.upper() not in unidades_validas:
-            # No falla, solo advierte
             print(f"⚠️ Advertencia: Unidad '{v}' no está en lista conocida: {unidades_validas}")
         return v.upper()
 

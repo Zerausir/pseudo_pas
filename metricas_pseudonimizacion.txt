@@ -5,39 +5,39 @@
 
 📊 TABLA 1: MÉTRICAS GLOBALES DEL SISTEMA
 -----------------------------------------------------------------
-  Entidades reales (VP+FN): 513
-  VP (pseudonimizados):     503
-  FN (no pseudonimizados):  10
+  Entidades reales (VP+FN): 495
+  VP (pseudonimizados):     487
+  FN (no pseudonimizados):  8
   FP (pseudonimización errónea): 0
   Precision:  100.0%
-  Recall:     98.1%
-  F1-Score:   99.0%
+  Recall:     98.4%
+  F1-Score:   99.2%
 
 📊 TABLA 2: MÉTRICAS POR COMPONENTE (CAPA)
 -----------------------------------------------------------------
   Componente                            VP   FN     P%     R%    F1%
   ------------------------------------------------------------
-  Regex (datos estructurados)           86    1  100.0   98.9   99.4
-  Contextual (encabezado)               33    1  100.0   97.1   98.5
-  spaCy NER                            384    8  100.0   98.0   99.0
+  Regex (datos estructurados)           83    1  100.0   98.8   99.4
+  Contextual (encabezado)               32    1  100.0   97.0   98.5
+  spaCy NER                            372    6  100.0   98.4   99.2
   Firmantes (regex)                      0    0    0.0    0.0    0.0
 
 📊 TABLA 3: MÉTRICAS POR TIPO DE ENTIDAD
 -----------------------------------------------------------------
   Tipo         Total real   VP   FN     P%     R%    F1%  Capa principal
   ------------------------------------------------------------
-  CEDULA               15   15    0  100.0  100.0  100.0  Capa 1 (regex)
-  DIRECCION            34   33    1  100.0   97.1   98.5  Capa 1.5 (contextual)
-  EMAIL                46   46    0  100.0  100.0  100.0  Capa 1 (regex)
-  NOMBRE              392  384    8  100.0   98.0   99.0  Capa 2 (spaCy NER)
+  CEDULA               13   13    0  100.0  100.0  100.0  Capa 1 (regex)
+  DIRECCION            33   32    1  100.0   97.0   98.5  Capa 1.5 (contextual)
+  EMAIL                45   45    0  100.0  100.0  100.0  Capa 1 (regex)
+  NOMBRE              378  372    6  100.0   98.4   99.2  Capa 2 (spaCy NER)
   RUC                  24   23    1  100.0   95.8   97.9  Capa 1 (regex)
   TELEFONO              2    2    0  100.0  100.0  100.0  Capa 1 (regex) / 1.5 (contextual)
 
 📋 TABLA 4: RESUMEN POR DOCUMENTO
 -----------------------------------------------------------------
-  Total documentos evaluados: 72
-  Pseudonimización completa:  65/72 (90.3%)
-  Pseudonimización parcial:   7/72 (9.7%)
+  Total documentos evaluados: 70
+  Pseudonimización completa:  64/70 (91.4%)
+  Pseudonimización parcial:   6/70 (8.6%)
 
   CCDE-PR-2021-194                    ✅ Completo
   CCDE-PR-2021-203                    ✅ Completo
@@ -54,7 +54,6 @@
   CCDS-PR-2022-0386                   ✅ Completo
   CCDS-PR-2022-269                    ✅ Completo
   CCDS-PR-2022-272                    ✅ Completo
-  CCDS-PR-2022-400                    ✅ Completo
   CCDS-PR-2022-412                    ✅ Completo
   CCDS-PR-2022-414                    ✅ Completo
   CCDS-PR-2023-0005                   ✅ Completo
@@ -88,9 +87,6 @@
     └─ FN: -406 E HIGUERAS EDIF. GRUPO TVCABLE
   CTDG-GE-2022-0299                   ⚠️  Parcial (1 FN)
     └─ FN: Ana
-  CTDG-GE-2022-0337                   ⚠️  Parcial (2 FN)
-    └─ FN: JUMBO
-    └─ FN: JUMBO DA RIO XAVIER
   CTDG-GE-2022-0382                   ✅ Completo
   CTDG-GE-2022-0392                   ✅ Completo
   CTDG-GE-2022-0435                   ✅ Completo

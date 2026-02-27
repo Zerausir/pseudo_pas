@@ -260,6 +260,12 @@ def guardar_peticion_razonada(db: Session, datos_extraidos: dict) -> Tuple[int, 
         if not numero_informe:
             raise ValueError("Petición Razonada debe tener 'informe_base.numero' para vincular con caso")
 
+        # Normalizar: eliminar prefijo "IT-" si lo incluyó el extractor
+        # (documentos 2021 referencian el informe como "IT-CTDG-GE-2021-XXXX")
+        if numero_informe.upper().startswith('IT-'):
+            numero_informe = numero_informe[3:]
+            logger.info(f"   ℹ️  Prefijo IT- eliminado: {numero_informe}")
+
         logger.info(f"🔍 Buscando caso existente para informe: {numero_informe}")
 
         # ========================================

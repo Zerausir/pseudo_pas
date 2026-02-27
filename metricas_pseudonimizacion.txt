@@ -5,40 +5,50 @@
 
 📊 TABLA 1: MÉTRICAS GLOBALES DEL SISTEMA
 -----------------------------------------------------------------
-  Entidades reales (VP+FN): 307
-  VP (pseudonimizados):     303
-  FN (no pseudonimizados):  4
+  Entidades reales (VP+FN): 513
+  VP (pseudonimizados):     503
+  FN (no pseudonimizados):  10
   FP (pseudonimización errónea): 0
   Precision:  100.0%
-  Recall:     98.7%
-  F1-Score:   99.3%
+  Recall:     98.1%
+  F1-Score:   99.0%
 
 📊 TABLA 2: MÉTRICAS POR COMPONENTE (CAPA)
 -----------------------------------------------------------------
   Componente                            VP   FN     P%     R%    F1%
   ------------------------------------------------------------
-  Regex (datos estructurados)           54    0  100.0  100.0  100.0
-  Contextual (encabezado)               20    1  100.0   95.2   97.6
-  spaCy NER                            229    3  100.0   98.7   99.3
+  Regex (datos estructurados)           86    1  100.0   98.9   99.4
+  Contextual (encabezado)               33    1  100.0   97.1   98.5
+  spaCy NER                            384    8  100.0   98.0   99.0
   Firmantes (regex)                      0    0    0.0    0.0    0.0
 
 📊 TABLA 3: MÉTRICAS POR TIPO DE ENTIDAD
 -----------------------------------------------------------------
   Tipo         Total real   VP   FN     P%     R%    F1%  Capa principal
   ------------------------------------------------------------
-  CEDULA               11   11    0  100.0  100.0  100.0  Capa 1 (regex)
-  DIRECCION            21   20    1  100.0   95.2   97.6  Capa 1.5 (contextual)
-  EMAIL                30   30    0  100.0  100.0  100.0  Capa 1 (regex)
-  NOMBRE              232  229    3  100.0   98.7   99.3  Capa 2 (spaCy NER)
-  RUC                  12   12    0  100.0  100.0  100.0  Capa 1 (regex)
-  TELEFONO              1    1    0  100.0  100.0  100.0  Capa 1 (regex) / 1.5 (contextual)
+  CEDULA               15   15    0  100.0  100.0  100.0  Capa 1 (regex)
+  DIRECCION            34   33    1  100.0   97.1   98.5  Capa 1.5 (contextual)
+  EMAIL                46   46    0  100.0  100.0  100.0  Capa 1 (regex)
+  NOMBRE              392  384    8  100.0   98.0   99.0  Capa 2 (spaCy NER)
+  RUC                  24   23    1  100.0   95.8   97.9  Capa 1 (regex)
+  TELEFONO              2    2    0  100.0  100.0  100.0  Capa 1 (regex) / 1.5 (contextual)
 
 📋 TABLA 4: RESUMEN POR DOCUMENTO
 -----------------------------------------------------------------
-  Total documentos evaluados: 44
-  Pseudonimización completa:  41/44 (93.2%)
-  Pseudonimización parcial:   3/44 (6.8%)
+  Total documentos evaluados: 72
+  Pseudonimización completa:  65/72 (90.3%)
+  Pseudonimización parcial:   7/72 (9.7%)
 
+  CCDE-PR-2021-194                    ✅ Completo
+  CCDE-PR-2021-203                    ✅ Completo
+  CCDS-PR-2021-0283                   ⚠️  Parcial (2 FN)
+    └─ FN: ALFRED O
+    └─ FN: SIMBAÑ A
+  CCDS-PR-2021-0303                   ⚠️  Parcial (2 FN)
+    └─ FN: ORDOÑEZ PEÑAFIEL KLEVER RENAN
+    └─ FN: ORDOÑEZ PEÑAFIEL KLEV ER RENAN
+  CCDS-PR-2021-0304                   ⚠️  Parcial (1 FN)
+    └─ FN: OSTAIZA CEDEÑO LUISA ESPERANZA
   CCDS-PR-2022-0212                   ✅ Completo
   CCDS-PR-2022-0377                   ✅ Completo
   CCDS-PR-2022-0386                   ✅ Completo
@@ -59,8 +69,21 @@
   CCDS-PR-2023-0090                   ✅ Completo
   CCDS-PR-2023-0156                   ✅ Completo
   CCDS-PR-2023-0194                   ✅ Completo
+  CCDS-PR-2023-0255                   ✅ Completo
   CTDG-2024-GE-0032                   ✅ Completo
+  CTDG-2024-GE-0048                   ✅ Completo
+  CTDG-2024-GE-0051                   ✅ Completo
   CTDG-2025-GE-0335                   ✅ Completo
+  CTDG-2025-GE-0589                   ✅ Completo
+  CTDG-2025-GE-0592                   ✅ Completo
+  CTDG-2025-GE-0607                   ⚠️  Parcial (1 FN)
+    └─ FN: 172473306600 1
+  CTDG-2025-GE-0691                   ✅ Completo
+  CTDG-GE-2021-0192                   ✅ Completo
+  CTDG-GE-2021-0303                   ✅ Completo
+  CTDG-GE-2021-0307                   ✅ Completo
+  CTDG-GE-2021-0370                   ✅ Completo
+  CTDG-GE-2021-0371                   ✅ Completo
   CTDG-GE-2022-0169                   ⚠️  Parcial (1 FN)
     └─ FN: -406 E HIGUERAS EDIF. GRUPO TVCABLE
   CTDG-GE-2022-0299                   ⚠️  Parcial (1 FN)
@@ -85,8 +108,19 @@
   CTDG-GE-2023-0096                   ✅ Completo
   CTDG-GE-2023-0197                   ✅ Completo
   CTDG-GE-2023-0255                   ✅ Completo
+  CTDG-GE-2023-0277                   ✅ Completo
+  CTDG-GE-2023-0497                   ✅ Completo
+  CTDG-GE-2024-0148                   ✅ Completo
+  PR-CCDS-2024-0050                   ✅ Completo
+  PR-CCDS-2024-0129                   ✅ Completo
   PR-CTDG-2024-GE-0032                ✅ Completo
+  PR-CTDG-2024-GE-0048                ✅ Completo
+  PR-CTDG-2024-GE-0051                ✅ Completo
   PR-CTDG-2025-GE-0335                ✅ Completo
+  PR-CTDG-2025-GE-0589                ✅ Completo
+  PR-CTDG-2025-GE-0592                ✅ Completo
+  PR-CTDG-2025-GE-0607                ✅ Completo
+  PR-CTDG-2025-GE-0691                ✅ Completo
 
 📌 NOTA METODOLÓGICA
 -----------------------------------------------------------------

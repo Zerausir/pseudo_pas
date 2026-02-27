@@ -194,6 +194,15 @@ async def pseudonymize_text(text: str, session_id: str) -> Dict:
     2. spaCy NER: Nombres restantes con validación estricta (IGNORECASE v2.1.5)
     3. Firmantes: Extracción de sección de firmas
     """
+    # Normalizar espacios OCR en secuencias numéricas que parecen RUC/cédula
+    # Ej: "172473306600 1" → "1724733066001" (OCR insertó espacio en el dígito final)
+    import re as _re
+    text = _re.sub(
+        r'(\d{10,12})\s(\d{1,3})(?=\D|$)',
+        lambda m: m.group(1) + m.group(2) if len(m.group(1) + m.group(2)) in [10, 13] else m.group(0),
+        text
+    )
+
     pseudonymized_text = text
     mapping = {}
     processed_values: Set[str] = set()

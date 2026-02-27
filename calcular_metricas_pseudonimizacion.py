@@ -16,6 +16,8 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
+CAMPOS_NUMERICOS = {'RUC', 'CEDULA', 'EMAIL', 'TELEFONO', 'DIRECCION', 'NOMBRE'}
+
 ENTIDAD_A_CAPA = {
     "RUC": "Capa 1 (regex)",
     "CEDULA": "Capa 1 (regex)",
@@ -36,18 +38,18 @@ CAPA_NOMBRES = {
 def deduplicar_csv(ruta: Path, subset_cols: list, descripcion: str) -> int:
     """
     Elimina filas duplicadas de un CSV in-place, manteniendo la última ocurrencia.
-    Necesaria porque procesar_masivo_v2.ps1 hace append en cada ejecución.
+    Necesaria porque los scripts de procesamiento hacen append en cada ejecución.
     """
     if not ruta.exists():
         return 0
 
     with open(ruta, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
-        # ✅ FIX: filtrar columnas None (coma extra al final del header)
+        # FIX: filtrar columnas None (coma extra al final del header)
         fieldnames = [fn for fn in reader.fieldnames if fn is not None]
         filas = []
         for row in reader:
-            # ✅ FIX: eliminar claves None de cada fila
+            # FIX: eliminar claves None de cada fila
             fila_limpia = {k: v for k, v in row.items() if k is not None}
             filas.append(fila_limpia)
 
@@ -105,6 +107,7 @@ def cargar_vp(ruta_csv: str) -> dict:
         for row in reader:
             doc = row['documento'].strip()
             vp[doc] = {
+                'tipo_doc': row.get('tipo_doc', '').strip(),
                 'RUC': int(row.get('RUC', 0) or 0),
                 'CEDULA': int(row.get('CEDULA', 0) or 0),
                 'EMAIL': int(row.get('EMAIL', 0) or 0),
@@ -126,14 +129,10 @@ def main():
 
     # ============================================================
     # PASO 0: DEDUPLICACIÓN AUTOMÁTICA
-    # procesar_masivo_v2.ps1 hace append → puede haber duplicados
-    # si se ejecutó más de una vez. Se limpian in-place aquí.
     # ============================================================
     print("\n🔍 Verificando duplicados en CSVs...")
-    deduplicar_csv(vp_csv, ['documento'],
-                   "vp_conteos.csv")
-    deduplicar_csv(fn_csv, ['documento', 'entidad_valor', 'tipo_entidad'],
-                   "fn_anotaciones.csv")
+    deduplicar_csv(vp_csv, ['documento'], "vp_conteos.csv")
+    deduplicar_csv(fn_csv, ['documento', 'entidad_valor', 'tipo_entidad'], "fn_anotaciones.csv")
     print()
 
     # ============================================================
@@ -164,8 +163,11 @@ def main():
     vp_por_tipo_doc = defaultdict(lambda: defaultdict(int))
 
     for doc, conteos in VP_CONTEOS.items():
-        tipo_doc = "informe" if "CTDG" in doc else "peticion"
+        tipo_doc = conteos.get('tipo_doc', 'desconocido')
         for tipo_ent, count in conteos.items():
+            # FIX: ignorar campo 'tipo_doc' (string) y cualquier clave no numérica
+            if tipo_ent not in CAMPOS_NUMERICOS:
+                continue
             tipo_upper = tipo_ent.upper()
             vp_total += count
             vp_por_tipo[tipo_upper] += count
@@ -206,8 +208,9 @@ def main():
         fn_doc = fn_por_doc.get(doc, [])
         fn_count = len(fn_doc)
         docs_info[doc] = {
-            "tipo": "informe" if "CTDG" in doc else "petición",
-            "VP": sum(conteos.values()),
+            "tipo": conteos.get('tipo_doc', 'desconocido'),
+            # FIX: sumar solo campos numéricos, ignorar 'tipo_doc'
+            "VP": sum(v for k, v in conteos.items() if k in CAMPOS_NUMERICOS),
             "FN": fn_count,
             "estado": "✅ Completo" if fn_count == 0 else f"⚠️  Parcial ({fn_count} FN)",
             "fn_detalle": [f['entidad_valor'] for f in fn_doc]
@@ -297,27 +300,30 @@ def main():
         ok_fill = PatternFill("solid", fgColor="C6EFCE")
         warn_fill = PatternFill("solid", fgColor="FFEB9C")
         center = Alignment(horizontal="center")
-        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'),
-                             top=Side(style='thin'), bottom=Side(style='thin'))
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin')
+        )
 
         def hdr(ws, row, col, value, width=None):
             cell = ws.cell(row=row, column=col, value=value)
-            cell.font = hdr_font;
+            cell.font = hdr_font
             cell.fill = hdr_fill
-            cell.alignment = center;
+            cell.alignment = center
             cell.border = thin_border
-            if width: ws.column_dimensions[get_column_letter(col)].width = width
+            if width:
+                ws.column_dimensions[get_column_letter(col)].width = width
 
         def dat(ws, row, col, value, fill=None, bold=False, center_align=False):
             cell = ws.cell(row=row, column=col, value=value)
-            if fill: cell.fill = fill
-            if bold: cell.font = Font(bold=True)
+            if fill:         cell.fill = fill
+            if bold:         cell.font = Font(bold=True)
             if center_align: cell.alignment = center
             cell.border = thin_border
             return cell
 
-        # Hoja 1: Global
-        ws1 = wb.active;
+        # ── Hoja 1: Global ─────────────────────────────────────
+        ws1 = wb.active
         ws1.title = "1. Global"
         ws1.merge_cells("A1:C1")
         ws1["A1"] = "MÉTRICAS GLOBALES DEL SISTEMA DE PSEUDONIMIZACIÓN"
@@ -333,28 +339,32 @@ def main():
             ("Recall", f"{m_global['Recall']}%", "De los datos reales, ¿cuántos se capturaron?"),
             ("F1-Score", f"{m_global['F1']}%", "Media armónica Precision/Recall"),
         ]
-        for i, (m, v, interp) in enumerate(filas_g, 4):
+        for i, (metric, val, interp) in enumerate(filas_g, 4):
             try:
-                fill = ok_fill if i >= 8 and float(str(v).replace('%', '')) >= 80 else None
-            except:
+                fill = ok_fill if i >= 8 and float(str(val).replace('%', '')) >= 80 else None
+            except Exception:
                 fill = None
-            dat(ws1, i, 1, m, bold=True);
-            dat(ws1, i, 2, v, fill=fill, center_align=True)
+            dat(ws1, i, 1, metric, bold=True)
+            dat(ws1, i, 2, val, fill=fill, center_align=True)
             dat(ws1, i, 3, interp)
 
-        # Hoja 2: Por Componente
+        # ── Hoja 2: Por Componente ──────────────────────────────
         ws2 = wb.create_sheet("2. Por Componente")
         ws2.merge_cells("A1:G1")
-        ws2["A1"] = "MÉTRICAS POR COMPONENTE (CAPA)";
+        ws2["A1"] = "MÉTRICAS POR COMPONENTE (CAPA)"
         ws2["A1"].font = Font(bold=True, size=12)
         for c, h in enumerate(["Componente", "Técnica", "VP", "FN", "Precision %", "Recall %", "F1 %"], 1):
             hdr(ws2, 3, c, h, width=32 if c == 1 else 14)
-        tecnicas = {"1_regex": "Determinística", "1.5_contextual": "Determinística",
-                    "2_spacy": "IA (NER)", "3_firmantes": "Determinística"}
+        tecnicas = {
+            "1_regex": "Determinística",
+            "1.5_contextual": "Determinística",
+            "2_spacy": "IA (NER)",
+            "3_firmantes": "Determinística",
+        }
         for i, (ck, nombre) in enumerate(CAPA_NOMBRES.items(), 4):
             m = metricas_capa[ck]
             fill = ok_fill if m['F1'] >= 80 else (warn_fill if m['F1'] > 0 else None)
-            dat(ws2, i, 1, nombre);
+            dat(ws2, i, 1, nombre)
             dat(ws2, i, 2, tecnicas[ck], center_align=True)
             dat(ws2, i, 3, m['VP'], center_align=True)
             dat(ws2, i, 4, m['FN'], center_align=True, fill=warn_fill if m['FN'] > 0 else None)
@@ -362,18 +372,19 @@ def main():
             dat(ws2, i, 6, m['Recall'], center_align=True, fill=fill)
             dat(ws2, i, 7, m['F1'], center_align=True, fill=fill)
 
-        # Hoja 3: Por Tipo Entidad
+        # ── Hoja 3: Por Tipo Entidad ────────────────────────────
         ws3 = wb.create_sheet("3. Por Tipo Entidad")
         ws3.merge_cells("A1:H1")
-        ws3["A1"] = "MÉTRICAS POR TIPO DE ENTIDAD";
+        ws3["A1"] = "MÉTRICAS POR TIPO DE ENTIDAD"
         ws3["A1"].font = Font(bold=True, size=12)
-        for c, h in enumerate(["Tipo Entidad", "Total Real", "VP", "FN",
-                               "Precision %", "Recall %", "F1 %", "Capa Principal"], 1):
+        for c, h in enumerate(
+                ["Tipo Entidad", "Total Real", "VP", "FN", "Precision %", "Recall %", "F1 %", "Capa Principal"], 1
+        ):
             hdr(ws3, 3, c, h, width=18 if c in [1, 8] else 12)
         for i, (tipo, m) in enumerate(metricas_tipo.items(), 4):
             capa = ENTIDAD_A_CAPA.get(tipo, "—")
             fill = ok_fill if m['F1'] >= 80 else (warn_fill if m['F1'] > 0 else None)
-            dat(ws3, i, 1, tipo, bold=True);
+            dat(ws3, i, 1, tipo, bold=True)
             dat(ws3, i, 2, m['Total_real'], center_align=True)
             dat(ws3, i, 3, m['VP'], center_align=True)
             dat(ws3, i, 4, m['FN'], center_align=True, fill=warn_fill if m['FN'] > 0 else None)
@@ -382,7 +393,7 @@ def main():
             dat(ws3, i, 7, m['F1'], center_align=True, fill=fill)
             dat(ws3, i, 8, capa)
 
-        # Hoja 4: Por Documento
+        # ── Hoja 4: Por Documento ───────────────────────────────
         ws4 = wb.create_sheet("4. Por Documento")
         ws4.merge_cells("A1:E1")
         ws4["A1"] = "RESUMEN POR DOCUMENTO (CONTEXTO EJECUTIVO)"
@@ -392,25 +403,27 @@ def main():
         row = 4
         for doc, info in sorted(docs_info.items()):
             fill = ok_fill if info['FN'] == 0 else warn_fill
-            dat(ws4, row, 1, doc);
+            dat(ws4, row, 1, doc)
             dat(ws4, row, 2, info['tipo'], center_align=True)
             dat(ws4, row, 3, info['VP'], center_align=True)
             dat(ws4, row, 4, info['FN'], center_align=True, fill=warn_fill if info['FN'] > 0 else None)
-            dat(ws4, row, 5, "Completo" if info['FN'] == 0 else f"Parcial ({info['FN']} FN)",
+            dat(ws4, row, 5,
+                "Completo" if info['FN'] == 0 else f"Parcial ({info['FN']} FN)",
                 fill=fill, center_align=True)
             row += 1
             for fn_val in info['fn_detalle']:
                 ws4.cell(row=row, column=1, value=f"  └─ FN: {fn_val[:60]}")
                 ws4.cell(row=row, column=1).font = Font(italic=True, color="8B0000")
                 row += 1
+
         row += 1
-        ws4.cell(row=row, column=1, value="RESUMEN").font = Font(bold=True);
+        ws4.cell(row=row, column=1, value="RESUMEN").font = Font(bold=True)
         row += 1
-        ws4.cell(row=row, column=1, value=f"Documentos evaluados: {docs_total}");
+        ws4.cell(row=row, column=1, value=f"Documentos evaluados: {docs_total}")
         row += 1
         ws4.cell(row=row, column=1,
                  value=f"Pseudonimización completa: {docs_completos}/{docs_total} "
-                       f"({docs_completos / docs_total * 100:.1f}%)");
+                       f"({docs_completos / docs_total * 100:.1f}%)")
         row += 1
         ws4.cell(row=row, column=1,
                  value=f"Pseudonimización parcial: {docs_parciales}/{docs_total} "

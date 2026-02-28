@@ -5,21 +5,21 @@
 
 📊 TABLA 1: MÉTRICAS GLOBALES DEL SISTEMA
 -----------------------------------------------------------------
-  Entidades reales (VP+FN): 495
+  Entidades reales (VP+FN): 515
   VP (pseudonimizados):     487
-  FN (no pseudonimizados):  8
+  FN (no pseudonimizados):  28
   FP (pseudonimización errónea): 0
   Precision:  100.0%
-  Recall:     98.4%
-  F1-Score:   99.2%
+  Recall:     94.6%
+  F1-Score:   97.2%
 
 📊 TABLA 2: MÉTRICAS POR COMPONENTE (CAPA)
 -----------------------------------------------------------------
   Componente                            VP   FN     P%     R%    F1%
   ------------------------------------------------------------
-  Regex (datos estructurados)           83    1  100.0   98.8   99.4
-  Contextual (encabezado)               32    1  100.0   97.0   98.5
-  spaCy NER                            372    6  100.0   98.4   99.2
+  Regex (datos estructurados)           83    0  100.0  100.0  100.0
+  Contextual (encabezado)               32    3  100.0   91.4   95.5
+  spaCy NER                            372   25  100.0   93.7   96.7
   Firmantes (regex)                      0    0    0.0    0.0    0.0
 
 📊 TABLA 3: MÉTRICAS POR TIPO DE ENTIDAD
@@ -27,17 +27,17 @@
   Tipo         Total real   VP   FN     P%     R%    F1%  Capa principal
   ------------------------------------------------------------
   CEDULA               13   13    0  100.0  100.0  100.0  Capa 1 (regex)
-  DIRECCION            33   32    1  100.0   97.0   98.5  Capa 1.5 (contextual)
+  DIRECCION            35   32    3  100.0   91.4   95.5  Capa 1.5 (contextual)
   EMAIL                45   45    0  100.0  100.0  100.0  Capa 1 (regex)
-  NOMBRE              378  372    6  100.0   98.4   99.2  Capa 2 (spaCy NER)
-  RUC                  24   23    1  100.0   95.8   97.9  Capa 1 (regex)
+  NOMBRE              397  372   25  100.0   93.7   96.7  Capa 2 (spaCy NER)
+  RUC                  23   23    0  100.0  100.0  100.0  Capa 1 (regex)
   TELEFONO              2    2    0  100.0  100.0  100.0  Capa 1 (regex) / 1.5 (contextual)
 
 📋 TABLA 4: RESUMEN POR DOCUMENTO
 -----------------------------------------------------------------
   Total documentos evaluados: 70
-  Pseudonimización completa:  64/70 (91.4%)
-  Pseudonimización parcial:   6/70 (8.6%)
+  Pseudonimización completa:  45/70 (64.3%)
+  Pseudonimización parcial:   25/70 (35.7%)
 
   CCDE-PR-2021-194                    ✅ Completo
   CCDE-PR-2021-203                    ✅ Completo
@@ -50,45 +50,60 @@
   CCDS-PR-2021-0304                   ⚠️  Parcial (1 FN)
     └─ FN: OSTAIZA CEDEÑO LUISA ESPERANZA
   CCDS-PR-2022-0212                   ✅ Completo
-  CCDS-PR-2022-0377                   ✅ Completo
-  CCDS-PR-2022-0386                   ✅ Completo
-  CCDS-PR-2022-269                    ✅ Completo
+  CCDS-PR-2022-0377                   ⚠️  Parcial (1 FN)
+    └─ FN: CATUCUAGO
+  CCDS-PR-2022-0386                   ⚠️  Parcial (2 FN)
+    └─ FN: SAMUEL
+    └─ FN: ELIA S SAMUEL
+  CCDS-PR-2022-269                    ⚠️  Parcial (1 FN)
+    └─ FN: TINAJERO MONTALVO
   CCDS-PR-2022-272                    ✅ Completo
   CCDS-PR-2022-412                    ✅ Completo
   CCDS-PR-2022-414                    ✅ Completo
   CCDS-PR-2023-0005                   ✅ Completo
   CCDS-PR-2023-0008                   ✅ Completo
-  CCDS-PR-2023-0011                   ✅ Completo
+  CCDS-PR-2023-0011                   ⚠️  Parcial (1 FN)
+    └─ FN: GUERRERO GUALSAQUI
   CCDS-PR-2023-0012                   ✅ Completo
   CCDS-PR-2023-0018                   ✅ Completo
   CCDS-PR-2023-0021                   ✅ Completo
-  CCDS-PR-2023-0022                   ✅ Completo
-  CCDS-PR-2023-0030                   ✅ Completo
-  CCDS-PR-2023-0036                   ✅ Completo
+  CCDS-PR-2023-0022                   ⚠️  Parcial (1 FN)
+    └─ FN: MANUE L
+  CCDS-PR-2023-0030                   ⚠️  Parcial (1 FN)
+    └─ FN: ERLINDA
+  CCDS-PR-2023-0036                   ⚠️  Parcial (1 FN)
+    └─ FN: MART HA INES
   CCDS-PR-2023-0090                   ✅ Completo
   CCDS-PR-2023-0156                   ✅ Completo
-  CCDS-PR-2023-0194                   ✅ Completo
+  CCDS-PR-2023-0194                   ⚠️  Parcial (1 FN)
+    └─ FN: CUENCA
   CCDS-PR-2023-0255                   ✅ Completo
   CTDG-2024-GE-0032                   ✅ Completo
   CTDG-2024-GE-0048                   ✅ Completo
-  CTDG-2024-GE-0051                   ✅ Completo
+  CTDG-2024-GE-0051                   ⚠️  Parcial (1 FN)
+    └─ FN: ORELLANA 1172 Y AMAZONAS (FRENTE AL COLEGIO MILITAR
   CTDG-2025-GE-0335                   ✅ Completo
   CTDG-2025-GE-0589                   ✅ Completo
   CTDG-2025-GE-0592                   ✅ Completo
-  CTDG-2025-GE-0607                   ⚠️  Parcial (1 FN)
-    └─ FN: 172473306600 1
-  CTDG-2025-GE-0691                   ✅ Completo
-  CTDG-GE-2021-0192                   ✅ Completo
+  CTDG-2025-GE-0607                   ✅ Completo
+  CTDG-2025-GE-0691                   ⚠️  Parcial (1 FN)
+    └─ FN: CHAVE Z SALAS
+  CTDG-GE-2021-0192                   ⚠️  Parcial (1 FN)
+    └─ FN: HEREDIA SIMBAÑA
   CTDG-GE-2021-0303                   ✅ Completo
   CTDG-GE-2021-0307                   ✅ Completo
-  CTDG-GE-2021-0370                   ✅ Completo
-  CTDG-GE-2021-0371                   ✅ Completo
+  CTDG-GE-2021-0370                   ⚠️  Parcial (1 FN)
+    └─ FN: Grijalva
+  CTDG-GE-2021-0371                   ⚠️  Parcial (1 FN)
+    └─ FN: Grijalva
   CTDG-GE-2022-0169                   ⚠️  Parcial (1 FN)
     └─ FN: -406 E HIGUERAS EDIF. GRUPO TVCABLE
   CTDG-GE-2022-0299                   ⚠️  Parcial (1 FN)
     └─ FN: Ana
-  CTDG-GE-2022-0382                   ✅ Completo
-  CTDG-GE-2022-0392                   ✅ Completo
+  CTDG-GE-2022-0382                   ⚠️  Parcial (1 FN)
+    └─ FN: SOLAR TE
+  CTDG-GE-2022-0392                   ⚠️  Parcial (1 FN)
+    └─ FN: MERC EDES
   CTDG-GE-2022-0435                   ✅ Completo
   CTDG-GE-2022-0449                   ✅ Completo
   CTDG-GE-2022-0456                   ✅ Completo
@@ -102,21 +117,26 @@
   CTDG-GE-2022-0490                   ✅ Completo
   CTDG-GE-2023-0041                   ✅ Completo
   CTDG-GE-2023-0096                   ✅ Completo
-  CTDG-GE-2023-0197                   ✅ Completo
-  CTDG-GE-2023-0255                   ✅ Completo
+  CTDG-GE-2023-0197                   ⚠️  Parcial (1 FN)
+    └─ FN: IÑIGUE Z
+  CTDG-GE-2023-0255                   ⚠️  Parcial (1 FN)
+    └─ FN: AV. NAPO S/N – BARRIO ELOY ALFARO – REF: JUNTO AL CUERP
   CTDG-GE-2023-0277                   ✅ Completo
   CTDG-GE-2023-0497                   ✅ Completo
   CTDG-GE-2024-0148                   ✅ Completo
   PR-CCDS-2024-0050                   ✅ Completo
   PR-CCDS-2024-0129                   ✅ Completo
-  PR-CTDG-2024-GE-0032                ✅ Completo
+  PR-CTDG-2024-GE-0032                ⚠️  Parcial (1 FN)
+    └─ FN: JA VIER
   PR-CTDG-2024-GE-0048                ✅ Completo
   PR-CTDG-2024-GE-0051                ✅ Completo
   PR-CTDG-2025-GE-0335                ✅ Completo
   PR-CTDG-2025-GE-0589                ✅ Completo
-  PR-CTDG-2025-GE-0592                ✅ Completo
+  PR-CTDG-2025-GE-0592                ⚠️  Parcial (1 FN)
+    └─ FN: Padilla
   PR-CTDG-2025-GE-0607                ✅ Completo
-  PR-CTDG-2025-GE-0691                ✅ Completo
+  PR-CTDG-2025-GE-0691                ⚠️  Parcial (1 FN)
+    └─ FN: D AMIAN
 
 📌 NOTA METODOLÓGICA
 -----------------------------------------------------------------

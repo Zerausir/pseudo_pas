@@ -21,9 +21,9 @@
 
 ---
 
-| 🎯 F1 Extracción | 🔐 F1 Pseudonimización | ⚡ Tiempo/doc | 💰 Costo/doc | 📄 Docs procesados |
+| 🎯 F1 Extracción | 🔐 F1 Pseudonimización | ⚡ Tiempo/doc | 💰 Costo/doc | 📄 Corpus evaluado |
 |:---:|:---:|:---:|:---:|:---:|
-| **97.8%** | **99.3%** | **~18 seg** | **$0.018 USD** | **42 reales** |
+| **97.4%** | **97.2%** | **~18 seg** | **$0.018 USD** | **70 documentos** |
 
 </div>
 
@@ -31,7 +31,7 @@
 
 ## 📌 Descripción del Proyecto
 
-**ARCOTEL PAS** automatiza la generación de documentación legal del **Procedimiento Administrativo Sancionador (PAS)** para infracciones del sector de telecomunicaciones en Ecuador, abordando un problema institucional crítico: casos simples que hoy demoran **34+ meses** en completarse.
+**ARCOTEL PAS** automatiza la extracción, validación y pseudonimización de datos del **Procedimiento Administrativo Sancionador (PAS)** para infracciones del sector de telecomunicaciones en Ecuador, abordando un problema institucional crítico: casos simples que hoy demoran **34+ meses** en completarse.
 
 > 💡 Este proyecto es el Trabajo Final de Estudios (TFE) de la **Universidad Internacional de La Rioja (UNIR)**, desarrollado en colaboración con **ARCOTEL Ecuador**.
 
@@ -41,23 +41,23 @@ ARCOTEL Ecuador detecta infracciones de prestadores de servicios de telecomunica
 
 ### La Solución
 
-Sistema híbrido que combina extracción LLM, validación determinística y pseudonimización LOPDP-compliant:
+Sistema híbrido que combina extracción LLM, validación determinística y pseudonimización LOPDP-conforme:
 
 ```
-PDF Informe Técnico → Pseudonimización → Claude API → Datos Estructurados → Validación → PostgreSQL
+PDF IT/PR → [Pseudonimización 4 Capas] → Claude API → JSON estructurado → Validador → PostgreSQL
 ```
 
 ---
 
 ## ✨ Características Principales
 
-- 🤖 **Extracción automática con LLM** — Claude API (`claude-sonnet-4-20250514`) con prompt engineering avanzado (few-shot, chain-of-thought, negative examples)
-- ⚖️ **Validación basada en reglas** — Motor determinístico ROTH Art. 204: calcula fechas tope, días de retraso, clasifica severidad
-- 🔐 **Pseudonimización 4 capas** — Regex + Header parser + spaCy NER + Firmantes; F1 = 99.3%, 0 falsos positivos
-- 🛡️ **Cumplimiento LOPDP Ecuador** — Validación visual obligatoria antes de cualquier envío a Claude API
-- 🐳 **Docker-first** — Un solo `docker-compose up -d` levanta 7 servicios configurados y listos
-- 📊 **Métricas automáticas** — Gold standard Excel con F1-score por campo, por documento y global
-- 🔑 **Seguridad por diseño** — AES-256-GCM, HashiCorp Vault KMS, TTL automático 1h, red interna aislada
+- 🤖 **Extracción automática con LLM** — Claude API (`claude-sonnet-4-20250514`) con prompt engineering avanzado (few-shot, chain-of-thought, negative examples). F1 global = **97.4%** sobre 47 documentos gold standard.
+- ⚖️ **Validación basada en reglas** — Motor determinístico ROTH Art. 204: calcula fechas tope, días de retraso, clasifica severidad. **100% detección, 0% falsos positivos.**
+- 🔐 **Pseudonimización 4 capas** — Regex + Header parser + spaCy NER + Firmantes. F1 = **97.2%** sobre corpus de 70 documentos, **0 falsos positivos**, Precisión = 100%.
+- 🛡️ **Cumplimiento LOPDP Ecuador** — Validación visual obligatoria antes de cualquier envío a Claude API. Claude API recibe exclusivamente pseudónimos (`NOMBRE_A3F7B2C1`).
+- 🐳 **Docker-first** — Un solo `docker-compose up -d` levanta 7 servicios configurados y listos.
+- 📊 **Gold standard validado** — Evaluación sobre 47 documentos (extracción) y 70 documentos (pseudonimización).
+- 🔑 **Seguridad por diseño** — AES-256-GCM, HashiCorp Vault KMS, TTL automático 1h, red interna Docker aislada.
 
 ---
 
@@ -92,26 +92,37 @@ docker-compose up -d
 ```bash
 curl http://localhost:8000/health
 # → {"status": "ok", "database": "connected", "version": "4.0.0"}
+
+curl http://localhost:8001/health
+# → {"status": "healthy", "vault": "connected", "redis": "connected", "db": "connected"}
 ```
 
 ### Procesar tu primer documento
 
 ```bash
 # Copiar PDF al directorio correspondiente
-cp mi_informe.pdf data/informes_tecnicos/CTDG-GE-2024-0001.pdf
+cp mi_informe.pdf data/informes_tecnicos/CTDG-GE-2025-0001.pdf
 
-# Previsualizar pseudonimización (OBLIGATORIO - LOPDP)
+# 1. Previsualizar pseudonimización (OBLIGATORIO — LOPDP)
 SESSION=$(curl -s -X POST http://localhost:8000/api/validacion/previsualizar \
   -H "Content-Type: application/json" \
-  -d '{"archivo":"CTDG-GE-2024-0001.pdf","tipo_documento":"informes_tecnicos"}' \
+  -d '{"archivo":"CTDG-GE-2025-0001.pdf","tipo_documento":"informes_tecnicos"}' \
   | jq -r '.session_id')
 
-# Revisar HTML generado → http://localhost:8000/outputs/
+# 2. Revisar HTML generado en http://localhost:8000/outputs/
+#    Verificar que todos los datos personales están reemplazados por pseudónimos
 
-# Procesar (tras confirmar que pseudonimización es correcta)
+# 3. Confirmar y procesar
 curl -X POST http://localhost:8000/api/archivos/procesar \
   -H "Content-Type: application/json" \
-  -d "{\"archivos\":[\"CTDG-GE-2024-0001.pdf\"],\"session_id\":\"$SESSION\",\"confirmado\":true}"
+  -d "{\"archivos\":[\"CTDG-GE-2025-0001.pdf\"],\"session_id\":\"$SESSION\",\"confirmado\":true}"
+```
+
+### Procesamiento batch (PowerShell)
+
+```powershell
+# Procesar corpus completo con validación interactiva
+.\procesar_masivo_v2.ps1
 ```
 
 ---
@@ -121,193 +132,51 @@ curl -X POST http://localhost:8000/api/archivos/procesar \
 El sistema implementa una **arquitectura de microservicios de dos capas** con aislamiento técnico de datos personales, cumpliendo LOPDP Ecuador Arts. 10.e, 33 y 37.
 
 ```
-                ┌─────────────────────────────────────────────┐
-                │           USUARIO / OPERADOR                │
-                │   (Analista CTDG — curl / PowerShell)       │
-                └──────────────────┬──────────────────────────┘
-                                   │ HTTP :8000
-                ┌──────────────────▼─────────────────────────┐
-                │       SERVICIO 1: BACKEND PRINCIPAL         │
-                │                                             │
-                │  FastAPI · SQLAlchemy 2.0 · Python 3.13     │
-                │                                             │
-                │  • Extracción texto PDFs (PyPDF2/pdfplumber)│
-                │  • Solicita pseudonimización (API interna)  │
-                │  • Envía a Claude API (solo pseudónimos)    │
-                │  • Validación ROTH Art.204 determinística   │
-                │  • Almacena datos reales en BD principal    │
-                └────────┬────────────────────────────────────┘
-                         │ JWT / HTTP                │ HTTPS
-                         │ :8001                     │ Claude API
-                ┌────────▼──────────────┐   ┌────────▼──────────────┐
-                │  SERVICIO 2:          │   │  Claude API           │
-                │  PSEUDONIMIZACIÓN     │   │  (Anthropic, EEUU)    │
-                │                      │   │                       │
-                │  spaCy NER           │   │  Nunca recibe datos   │
-                │  HashiCorp Vault KMS │   │  personales reales    │
-                │  Redis (TTL 1h)      │   └───────────────────────┘
-                │  AES-256-GCM         │
-                │  Puerto 127.0.0.1    │
-                └──────────────────────┘
-
-  ┌─────────────────┐  ┌──────────────────────┐  ┌──────────┐  ┌────────────┐
-  │  postgres_main  │  │  postgres_pseudonym   │  │  Redis   │  │   Vault    │
-  │  :5432          │  │  :5433                │  │  :6379   │  │   :8200    │
-  │  Datos negocio  │  │  Mapeos cifrados TTL  │  │  Cache   │  │  KMS keys  │
-  └─────────────────┘  └──────────────────────┘  └──────────┘  └────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CAPA DE PROCESAMIENTO                           │
+│                                                                         │
+│  PDF IT/PR                                                              │
+│     │                                                                   │
+│     ▼                                                                   │
+│  ┌─────────────────────────────────────────────────┐                   │
+│  │        SERVICIO PSEUDONIMIZACIÓN (puerto 8001)  │                   │
+│  │   Capa 1: Regex   → RUC, Cédula, Email, Tfno    │                   │
+│  │   Capa 1.5: Header→ Nombre empresa, Dirección   │                   │
+│  │   Capa 2: spaCy   → Nombres de personas (NER)   │                   │
+│  │   Capa 3: Firmas  → Firmantes del documento     │                   │
+│  │                                                  │                   │
+│  │   postgres_pseudonym ← Vault AES-256-GCM        │                   │
+│  │   Redis TTL 1h                                   │                   │
+│  └─────────────────────────────────────────────────┘                   │
+│     │ texto con PSEUDÓNIMOS (nunca datos reales)                       │
+│     ▼                                                                   │
+│  ┌──────────────────────────────────────────┐                         │
+│  │     CLAUDE API (claude-sonnet-4-20250514)│                         │
+│  │     Few-shot prompting, temperatura 0.0  │                         │
+│  └──────────────────────────────────────────┘                         │
+│     │ JSON estructurado                                                │
+│     ▼                                                                   │
+│  ┌──────────────────────────────────────────┐                         │
+│  │  VALIDADOR ROTH Art. 204 (determinístico)│                         │
+│  │  → Fechas tope, días retraso, severidad  │                         │
+│  └──────────────────────────────────────────┘                         │
+│     │                                                                   │
+│     ▼                                                                   │
+│  postgres_main (datos de negocio)                                      │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Redes Docker y Aislamiento
+### Servicios Docker (7 contenedores)
 
-| Red | Servicios | Internet |
-|---|---|:---:|
-| `main_network` | backend, postgres, adminer | ✅ |
-| `pseudonym_network` | pseudonym-api, postgres_pseudonym, vault, redis | ❌ |
-| `internal_api` | backend ↔ pseudonym-api | — |
-
-> 🔒 El servicio de pseudonimización **no tiene acceso a internet**. Solo el backend puede llamarlo, y únicamente a través de `internal_api` con JWT.
-
----
-
-## 🔄 Flujo de Procesamiento
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  FASE 1: VALIDACIÓN OBLIGATORIA (LOPDP)                        │
-│                                                                 │
-│  POST /api/validacion/previsualizar                             │
-│    ├── Extrae texto PDF                                         │
-│    ├── Pseudonimiza (4 capas: regex + header + spaCy + firmas) │
-│    ├── Genera HTML con pseudónimos resaltados                   │
-│    └── Retorna session_id                                       │
-│                                                                 │
-│  👁️  Operador descarga HTML → revisa manualmente → confirma    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  FASE 2: EXTRACCIÓN Y ALMACENAMIENTO                           │
-│                                                                 │
-│  POST /api/archivos/procesar {confirmado: true}                 │
-│    ├── [HTTP 403] si confirmado=false → instrucciones LOPDP    │
-│    ├── Detecta tipo doc (informes_tecnicos / peticiones)        │
-│    ├── Pseudonimiza → envía a Claude API                        │
-│    ├── Claude extrae JSON estructurado                          │
-│    ├── Des-pseudonimiza → datos reales                          │
-│    ├── Calcula campos derivados (dias_retraso, fecha_max_gfc)   │
-│    ├── Valida reglas ROTH Art.204 (R1, R2, R3)                 │
-│    └── Guarda en PostgreSQL (casos, documentos, validaciones)   │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Ordenamiento automático garantizado:** Informes Técnicos → Peticiones Razonadas → Otros (integridad referencial BD).
-
----
-
-## 🛠️ Stack Tecnológico
-
-<details>
-<summary><b>Backend Principal</b></summary>
-
-| Componente | Versión | Uso |
+| Servicio | Puerto | Descripción |
 |---|---|---|
-| Python | 3.13.11 | Lenguaje base |
-| FastAPI | 0.128.0 | Framework API REST |
-| SQLAlchemy | 2.0.46 | ORM estilo 2.0 |
-| PostgreSQL | 18-alpine | Base de datos principal |
-| Anthropic SDK | 0.76.0 | Cliente Claude API |
-| PyPDF2 | 3.0.1 | Extracción texto PDFs |
-| pdfplumber | 0.11.9 | PDFs con layout complejo |
-| pytesseract | 0.3.13 | OCR PDFs escaneados |
-| python-docx | 1.2.0 | Generación documentos Word |
-| Pydantic v2 | 2.12.5 | Validación schemas |
-| pandas | 3.0.0 | Análisis métricas |
-| scikit-learn | 1.8.0 | Cálculo F1-score |
-| structlog | 25.5.0 | Logging estructurado |
-
-</details>
-
-<details>
-<summary><b>Servicio de Pseudonimización</b></summary>
-
-| Componente | Versión | Uso |
-|---|---|---|
-| FastAPI | 0.128.0 | API interna (red privada) |
-| spaCy + es_core_news_lg | 3.8.11 | NER detección personas (PER) |
-| cryptography | 46.0.4 | AES-256-GCM cifrado local |
-| hvac | 2.4.0 | Cliente HashiCorp Vault KMS |
-| redis | 7.1.1 | Cache sesiones TTL |
-| python-jose | 3.5.0 | JWT autenticación interna |
-| HashiCorp Vault | latest | Gestión claves cifrado |
-| Redis | 8.4.0-alpine | Cache (TTL 1h) |
-
-</details>
-
-<details>
-<summary><b>Testing y Calidad de Código</b></summary>
-
-| Herramienta | Versión | Uso |
-|---|---|---|
-| pytest | 9.0.2 | Testing unitario e integración |
-| pytest-asyncio | 1.3.0 | Tests async |
-| pytest-cov | 7.0.0 | Cobertura de código |
-| black | 26.1.0 | Formateo código |
-| isort | 7.0.0 | Orden imports |
-| flake8 | 7.3.0 | Linting |
-| mypy | 1.19.1 | Type checking estático |
-
-</details>
-
----
-
-## 📁 Estructura del Repositorio
-
-```
-arcotel-pas/
-│
-├── 🖥️  backend/
-│   ├── app/
-│   │   ├── main.py                          # FastAPI v4.0 + StaticFiles
-│   │   ├── database.py                      # SQLAlchemy engine + get_db()
-│   │   ├── api/
-│   │   │   ├── procesador.py                # POST /api/archivos/procesar
-│   │   │   └── validacion.py                # POST /api/validacion/previsualizar
-│   │   ├── extractors/
-│   │   │   ├── informe_tecnico_extractor.py # Claude API + Pydantic + retry
-│   │   │   └── peticion_razonada_extractor.py
-│   │   ├── services/
-│   │   │   ├── pseudonym_client.py          # Cliente HTTP inter-servicios
-│   │   │   └── caso_service.py              # CRUD casos PAS
-│   │   ├── validators/
-│   │   │   └── validador_informe.py         # Motor reglas ROTH Art.204
-│   │   └── models/                          # SQLAlchemy ORM models
-│   ├── init-db/                             # Auto-init PostgreSQL en Docker
-│   ├── Dockerfile
-│   └── requirements.txt
-│
-├── 🔐  pseudonym-service/
-│   ├── app/
-│   │   ├── main.py                          # FastAPI (solo red interna)
-│   │   ├── api/
-│   │   │   ├── internal.py                  # /internal/pseudonymize + /depseudonymize
-│   │   │   └── health.py                    # /health, /ready, /live
-│   │   └── services/
-│   │       ├── pseudonymization.py          # Lógica 4 capas completa
-│   │       └── spacy_detector.py            # NER + normalización MAYÚSCULAS
-│   ├── init-db/
-│   ├── Dockerfile
-│   └── requirements.txt
-│
-├── 📂  data/                                # PDFs de entrada (bind mount Docker)
-│   ├── informes_tecnicos/                   # CTDG-GE-YYYY-XXXX.pdf
-│   └── peticiones_razonadas/                # XXXX-PR-YYYY-ZZZZ.pdf
-│
-├── 📜  procesar_masivo_v2.ps1               # Batch processing con validación interactiva
-├── 🐳  docker-compose.yml                   # Orquestación 7 servicios
-├── 📋  .env.example                         # Plantilla de configuración
-├── 🔐  PSEUDONIMIZACION_ARQUITECTURA.md     # Documentación seguridad completa
-└── ⚖️   LICENSE                              # MIT
-```
+| `backend` | 8000 | FastAPI — API principal y lógica de negocio |
+| `pseudonym-api` | 8001 | Servicio de pseudonimización (4 capas) |
+| `postgres_main` | 5432 | Base de datos principal (casos PAS) |
+| `postgres_pseudonym` | 5433 | Mapeos cifrados (exclusivo para pseudonimización) |
+| `vault` | 8200 | HashiCorp Vault — KMS con AES-256-GCM |
+| `redis` | 6379 | TTL de sesiones (expiración automática 1h) |
+| `adminer` | 8080 | UI de administración de bases de datos |
 
 ---
 
@@ -328,213 +197,225 @@ El sistema procesa PDFs con **datos personales de ciudadanos ecuatorianos** que 
 
 ```
 Texto original:
-  "TELECOMUNICACIONES WRXXXXXX, RUC: 179XXXXXXXXXX
-   Rep. Legal: MOXXX UNXXXXX KLXXXX AXXXX, correo@empresa.com"
+  "TELECOMUNICACIONES EJEMPLO S.A., RUC: 1792554136001
+   Rep. Legal: JUAN PÉREZ GARCÍA, correo@empresa.com
+   Dirección: AV. NAPO S/N Y BOMBEROS"
 
                     ↓ CAPA 1: Regex (datos estructurados)
   RUC: 1792554136001      →  RUC_A3F7B2C1
   correo@empresa.com      →  EMAIL_D4E8F2A1
+  AV. NAPO S/N Y BOMBEROS →  DIRECCION_G7H1I4J2   ← Intersecciones
+  1719710830              →  CEDULA_B9C3D7E5
+  0999079807              →  TELEFONO_F2C9D6E3
 
                     ↓ CAPA 1.5: Header Parser (encabezado del documento)
-  TELECOMUNICACIONES WRX ...  →  NOMBRE_B9C3D7E5
+  TELECOMUNICACIONES EJEMPLO S.A.  →  NOMBRE_K5L8M2N9
+  AV. EJEMPLO S58F-93 CASA 12     →  DIRECCION_H4I7J1K3   ← Sin intersección
 
-                    ↓ CAPA 2: spaCy NER (es_core_news_lg)
-  MOXXX UNXXXXX ...       →  NOMBRE_F2C9D6E3
-  (normaliza MAYÚSCULAS → Title Case antes de NER; re.IGNORECASE para reemplazos)
+                    ↓ CAPA 2: spaCy NER (es_core_news_lg, re.IGNORECASE)
+  JUAN PÉREZ GARCÍA       →  NOMBRE_P6Q9R3S7
 
-                    ↓ CAPA 3: Firmantes (regex sección de firmas)
-  Elaborado por: Ing. ...  →  NOMBRE_G7H1I4J2
-
-Texto enviado a Claude API:
-  "NOMBRE_B9C3D7E5, RUC: RUC_A3F7B2C1
-   Rep. Legal: NOMBRE_F2C9D6E3, EMAIL_D4E8F2A1"
+                    ↓ CAPA 3: Firmantes (regex títulos académicos)
+  Ing. DAVID CHÁVEZ       →  NOMBRE_T2U5V8W1
+  (Elaborado/Revisado/Aprobado por)
 ```
 
-### Métricas de Pseudonimización (44 documentos reales)
+> ⚠️ **Limitación metodológica**: La Capa 3 (Firmantes) detecta nombres en la sección de firmas del documento. En el corpus evaluado registró 0 VP y 0 FN porque los nombres de firmantes ya habían sido capturados previamente por la Capa 2 (spaCy NER).
 
-| Tipo Entidad | Total Real | Detectados | Perdidos | Precision | Recall | F1 |
+### Métricas de Pseudonimización (corpus 70 documentos)
+
+| Tipo | Total | VP | FN | Precision | Recall | F1 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| RUC | 12 | 12 | 0 | 100.0% | 100.0% | **100.0%** |
-| CEDULA | 11 | 11 | 0 | 100.0% | 100.0% | **100.0%** |
-| EMAIL | 30 | 30 | 0 | 100.0% | 100.0% | **100.0%** |
-| TELEFONO | 1 | 1 | 0 | 100.0% | 100.0% | **100.0%** |
-| DIRECCION | 21 | 20 | 1 | 100.0% | 95.2% | **97.6%** |
-| NOMBRE | 232 | 229 | 3 | 100.0% | 98.7% | **99.3%** |
-| **GLOBAL** | **307** | **303** | **4** | **100.0%** | **98.7%** | **99.3%** |
+| RUC | 23 | 23 | 0 | 100.0% | 100.0% | **100.0%** |
+| CEDULA | 13 | 13 | 0 | 100.0% | 100.0% | **100.0%** |
+| EMAIL | 45 | 45 | 0 | 100.0% | 100.0% | **100.0%** |
+| TELEFONO | 2 | 2 | 0 | 100.0% | 100.0% | **100.0%** |
+| DIRECCION | 35 | 32 | 3 | 100.0% | 91.4% | **95.5%** |
+| NOMBRE | 397 | 372 | 25 | 100.0% | 93.7% | **96.7%** |
+| **GLOBAL** | **515** | **487** | **28** | **100.0%** | **94.6%** | **97.2%** |
 
-> ✅ **0 falsos positivos** — ningún dato no-personal fue pseudonimizado incorrectamente.
+- **45/70 documentos (64.3%)** — Pseudonimización completa
+- **25/70 documentos (35.7%)** — Pseudonimización parcial (≥1 FN, típicamente nombre fragmentado por OCR)
+- **0 falsos positivos** — El sistema nunca pseudonimizó texto institucional por error
 
----
-
-## 📡 API Reference
-
-### Backend Principal (`:8000`)
-
-<details>
-<summary><b>GET /health</b> — Estado del sistema</summary>
-
-```json
-{
-  "status": "ok",
-  "database": "connected",
-  "version": "4.0.0",
-  "features": {
-    "pseudonymization": true,
-    "validation_required": true,
-    "static_files": true
-  }
-}
-```
-</details>
-
-<details>
-<summary><b>POST /api/validacion/previsualizar</b> — Generar HTML de validación (paso obligatorio)</summary>
-
-**Request:**
-```json
-{
-  "archivo": "CTDG-GE-2022-0487.pdf",
-  "tipo_documento": "informes_tecnicos"
-}
-```
-
-**Response:**
-```json
-{
-  "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "html_filename": "preview_CTDG-GE-2022-0487_20260224.html",
-  "pseudonyms_count": 12,
-  "pseudonyms_by_type": {
-    "NOMBRE": 8,
-    "RUC": 2,
-    "EMAIL": 1,
-    "DIRECCION": 1
-  }
-}
-```
-
-El HTML se sirve en `/outputs/{html_filename}`.
-</details>
-
-<details>
-<summary><b>POST /api/archivos/procesar</b> — Extraer y guardar datos (requiere confirmación previa)</summary>
-
-**Request:**
-```json
-{
-  "archivos": ["CTDG-GE-2022-0487.pdf"],
-  "session_id": "550e8400-e29b-41d4-a716-446655440000",
-  "confirmado": true,
-  "forzar_reprocesar": false
-}
-```
-
-> ⚠️ Si `confirmado: false` → **HTTP 403** con instrucciones de cumplimiento LOPDP.
-
-**Response (éxito):**
-```json
-{
-  "procesados": 1,
-  "errores": 0,
-  "resultados": [{
-    "archivo": "CTDG-GE-2022-0487.pdf",
-    "caso_id": 42,
-    "numero_doc": "CTDG-GE-2022-0487",
-    "prestador": "TELECOMUNICACIONES WRIVERA RED S.A.",
-    "estado": "extraido",
-    "validacion": { "es_valido": true, "num_errors": 0, "num_warnings": 1 }
-  }]
-}
-```
-</details>
-
-<details>
-<summary><b>GET /api/archivos/listar</b> — Listar PDFs disponibles</summary>
-
-Retorna PDFs organizados por subdirectorio con estado de procesamiento (`ya_procesado`, `numero_documento`, `caso_id`).
-</details>
-
-### Servicio Pseudonimización (`:8001`, solo localhost)
-
-| Endpoint | Método | Descripción |
-|---|---|---|
-| `/internal/pseudonymize` | POST | Pseudonimiza texto (JWT requerido) |
-| `/internal/depseudonymize` | POST | Recupera valores originales |
-| `/session/{session_id}` | DELETE | Limpia mapeos de sesión |
-| `/health` · `/ready` · `/live` | GET | Health checks Docker/K8s |
+> Ver [`PSEUDONIMIZACION_ARQUITECTURA.md`](PSEUDONIMIZACION_ARQUITECTURA.md) para documentación técnica completa.
 
 ---
 
 ## 📊 Métricas de Rendimiento
 
-### Extracción de Datos (42 documentos reales ARCOTEL 2022–2025)
+### OE1 — Extracción de entidades (gold standard: 47 documentos)
 
-| Campo Extraído | F1-Score |
-|---|:---:|
-| numero_documento | 100.0% |
-| fecha | 100.0% |
-| prestador_ruc | 100.0% |
-| tipo_infraccion | 100.0% |
-| fecha_real_entrega | 100.0% |
-| prestador_nombre | 97.6% |
-| representante_legal | 95.2% |
-| fecha_maxima_entrega | 97.1% |
-| dias_retraso | 97.1% |
-| articulos_violados | 85.7% ¹ |
-| **F1 GLOBAL** | **97.8%** |
+| Campo | IT F1 | PR F1 | Notas |
+|---|:---:|:---:|---|
+| numero_documento | 100.0% | 100.0% | — |
+| fecha | 100.0% | 100.0% | — |
+| prestador_ruc | 100.0% | 100.0% | Campo crítico |
+| tipo_infraccion | 100.0% | 100.0% | Campo crítico |
+| fecha_real_entrega | 100.0% | 100.0% | Campo crítico |
+| prestador_nombre | 96.4% | 100.0% | FN por truncamiento OCR |
+| representante_legal | 92.9% | 100.0% | FN por formato atípico |
+| fecha_maxima_entrega | 85.7% | 100.0% | FN en docs 2021 sin tabla de fechas |
+| dias_retraso | 85.7% | 100.0% | Campo derivado — FN cascada |
+| articulos_violados | — | 100.0% | ¹ |
+| informe_base | — | 100.0% | Solo en PR |
 
-> ¹ Variación en numeración de secciones entre formularios FO-DEAR-47 (2022 vs 2025). El prompt busca por título de sección en lugar de número.
+> ¹ `articulos_violados` solo aplica a IT. FN por variación en numeración de sección entre formularios FO-DEAR-47 v2022 y v2025.
 
-### Performance por Documento
+**Resumen por tipo de documento:**
 
-| Métrica | Valor |
-|---|---|
-| Tokens input promedio | ~3,500 tokens |
-| Tokens output promedio | ~800 tokens |
-| Costo por documento | $0.018 USD |
-| Tiempo de procesamiento | ~18 segundos |
-| Modelo LLM | `claude-sonnet-4-20250514` |
-| Temperatura | 0.0 (determinístico) |
-| Reintentos ante error 529 | 3 (backoff 5s → 10s → 20s) |
+| Grupo | Docs | Evaluaciones | FN | F1 global |
+|---|:---:|:---:|:---:|:---:|
+| Informes Técnicos (9 campos) | 28 | 252 | 10 | **96.0%** |
+| Peticiones Razonadas (7 campos) | 19 | 133 | 0 | **100.0%** |
+| **★ GLOBAL** | **47** | **385** | **10** | **97.4%** |
+
+### OE2 — Pseudonimización LOPDP (corpus: 70 documentos)
+
+| Métrica | Valor | Meta | ✓ |
+|---|:---:|:---:|:---:|
+| Precisión | 100.0% | = 100% | ✅ |
+| Recall | 94.6% | ≥ 95% | ⚠️ |
+| F1-Score global | **97.2%** | ≥ 95% | ✅ |
+| Falsos positivos | 0 | 0 | ✅ |
+| Cobertura completa | 45/70 (64.3%) | ≥ 90% | ⚠️ |
+
+> **Nota**: El Recall de 94.6% y la cobertura de 64.3% reflejan la limitación de OCR fragmentado en el corpus de 70 documentos. Los 28 FN corresponden exclusivamente a texto fragmentado por pypdf (e.g., `CHAVE Z SALAS`, `OSTAIZA CEDEÑO LUISA ESPERANZA`), no a fallas del modelo NER en sí. El sistema mantiene Precisión = 100% (cero datos institucionales pseudonimizados por error).
+
+### OE3 — Impacto operacional
+
+| Métrica | Manual | Automático | Mejora |
+|---|:---:|:---:|:---:|
+| Tiempo por par IT+PR | 15 min | 3.5 min | **↓ 76.7%** |
+| Costo por caso | — | $0.036 USD | ✅ vs límite $5.00 |
+| Tokens input promedio | — | ~3,500 | — |
+| Tokens output promedio | — | ~800 | — |
+| Tiempo por documento | — | ~18 seg | — |
+
+### Resultados vs. Criterios de Éxito
+
+| OE | Métrica | Meta | Resultado | Estado | Diferencia |
+|---|---|---|---|---|---|
+| OE1 | F1-Score global | ≥ 85% | **97.4%** | ✅ | +12.4 pp |
+| OE1 | F1 entidades críticas | ≥ 90% | **100.0%** | ✅ | +10.0 pp |
+| OE1 | Detección inconsistencias | ≥ 80% | **100.0%** | ✅ | +20.0 pp |
+| OE1 | FP validador | < 10% | **0.0%** | ✅ | −10.0 pp |
+| OE2 | Precisión pseudonimización | = 100% | **100.0%** | ✅ | 0.0 pp |
+| OE2 | F1 pseudonimización | ≥ 95% | **97.2%** | ✅ | +2.2 pp |
+| OE3 | Reducción tiempo | ≥ 60% | **76.7%** | ✅ | +16.7 pp |
+| OE3 | Costo por caso | < $5.00 | **$0.036** | ✅ | −99.3% |
+
+---
+
+## 🏗️ Estructura del Repositorio
+
+```
+arcotel-pas/
+│
+├── 🐍  backend/                             # Servicio principal FastAPI
+│   ├── app/
+│   │   ├── main.py                          # App FastAPI + routers
+│   │   ├── config.py                        # Settings desde variables de entorno
+│   │   ├── database.py                      # SQLAlchemy 2.0 + URL.create()
+│   │   ├── models/                          # SQLAlchemy ORM models
+│   │   │   ├── caso_pas.py
+│   │   │   ├── documento_pas.py
+│   │   │   └── prestador.py
+│   │   ├── schemas/                         # Pydantic v2 schemas
+│   │   │   ├── informe_tecnico.py
+│   │   │   └── peticion_razonada.py
+│   │   ├── extractors/                      # Claude API extractors (few-shot)
+│   │   │   ├── informe_tecnico_extractor.py
+│   │   │   └── peticion_razonada_extractor.py
+│   │   ├── validators/                      # Validador ROTH Art. 204
+│   │   │   └── validador_informe.py
+│   │   ├── services/                        # Lógica de negocio
+│   │   │   └── caso_service.py
+│   │   └── api/                             # Endpoints REST
+│   │       ├── archivos.py                  # /api/archivos/listar + /procesar
+│   │       ├── procesador.py                # Lógica de procesamiento controlado
+│   │       ├── validacion.py                # /api/validacion/previsualizar
+│   │       └── casos.py                     # /api/casos/*
+│   ├── init-db/                             # SQL auto-ejecución en docker-entrypoint
+│   ├── Dockerfile                           # Multi-stage build Python 3.13.11
+│   └── requirements.txt
+│
+├── 🔐  pseudonym-service/                   # Servicio de pseudonimización (LOPDP)
+│   ├── app/
+│   │   ├── main.py                          # FastAPI (solo red interna)
+│   │   ├── api/
+│   │   │   ├── internal.py                  # /internal/pseudonymize + /depseudonymize
+│   │   │   └── health.py                    # /health, /ready, /live
+│   │   └── services/
+│   │       ├── pseudonymization.py          # Lógica 4 capas completa
+│   │       └── spacy_detector.py            # NER + normalización MAYÚSCULAS
+│   ├── init-db/
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── 📂  data/                                # PDFs de entrada (bind mount Docker)
+│   ├── informes_tecnicos/                   # CTDG-GE-YYYY-XXXX.pdf / CTDG-YYYY-GE-XXXX.pdf
+│   └── peticiones_razonadas/                # CCDS-PR-YYYY-ZZZZ.pdf / PR-CTDG-YYYY-GE-XXXX.pdf
+│
+├── 📜  procesar_masivo_v2.ps1               # Batch processing con validación interactiva
+├── 📜  procesar_corpus_completo.ps1         # Script para corpus completo de evaluación
+├── 🐳  docker-compose.yml                   # Orquestación 7 servicios
+├── 📋  .env.example                         # Plantilla de configuración
+├── 🔐  PSEUDONIMIZACION_ARQUITECTURA.md     # Documentación técnica completa de seguridad
+└── ⚖️   LICENSE                              # MIT
+```
 
 ---
 
 ## ⚙️ Configuración
 
-### Variables de Entorno (`.env`)
+### Variables de Entorno (.env)
 
-```env
-# ===== BASE DE DATOS PRINCIPAL =====
-POSTGRES_DB=arcotel_pas
-POSTGRES_USER=arcotel_user
-POSTGRES_PASSWORD=<contraseña-segura>
-POSTGRES_PORT=5432
-
-# ===== BASE DE DATOS PSEUDONIMIZACIÓN =====
-POSTGRES_PSEUDONYM_PASSWORD=<contraseña-segura-distinta>
-
-# ===== HASHICORP VAULT =====
-VAULT_DEV_ROOT_TOKEN_ID=<token-seguro>
-VAULT_TOKEN=<mismo-token>
-
-# ===== REDIS =====
-REDIS_PASSWORD=<contraseña-redis>
-
-# ===== AUTENTICACIÓN INTERNA =====
-JWT_SECRET=<secreto-min-32-chars>
-
-# ===== ANTHROPIC =====
+```bash
+# ============================================
+# ANTHROPIC — Requerido para extracción LLM
+# ============================================
 ANTHROPIC_API_KEY=sk-ant-...
 
-# ===== CONFIGURACIÓN =====
-TTL_HOURS=1
+# ============================================
+# POSTGRESQL — Base de datos principal
+# ============================================
+POSTGRES_USER=arcotel_user
+POSTGRES_PASSWORD=tu_password_seguro
+POSTGRES_DB=arcotel_pas
+
+# ============================================
+# POSTGRESQL — Base de datos pseudonimización
+# ============================================
+POSTGRES_PSEUDONYM_PASSWORD=tu_password_pseudonim
+
+# ============================================
+# HASHICORP VAULT — KMS cifrado AES-256-GCM
+# ============================================
+VAULT_DEV_ROOT_TOKEN_ID=root-token-dev-only   # ⚠️ SOLO DESARROLLO
+VAULT_TOKEN=root-token-dev-only
+
+# ============================================
+# REDIS — TTL de sesiones de pseudonimización
+# ============================================
+REDIS_PASSWORD=redis_password_123
+
+# ============================================
+# JWT — Autenticación interna entre servicios
+# ============================================
+JWT_SECRET=tu_jwt_secret_256_bits_minimo
+
+# ============================================
+# APLICACIÓN
+# ============================================
 ENV=development
 DEBUG=false
-BACKEND_PORT=8000
-ADMINER_PORT=8080
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+TTL_HOURS=1
+MAX_UPLOAD_SIZE=52428800
 ```
 
-> 🔒 **Nunca hagas commit** de tu `.env`. Está en `.gitignore` por defecto.
+> ⚠️ El archivo `.env` está en `.gitignore`. Nunca comitear credenciales reales.
 
 ---
 
@@ -553,7 +434,7 @@ informe_tecnico → peticion_razonada → actuacion_previa →
 acto_inicio → pruebas → dictamen → resolucion → cerrado
 ```
 
-### Consultas Útiles
+### Consultas útiles
 
 ```sql
 -- Casos activos con días transcurridos
@@ -562,9 +443,13 @@ SELECT * FROM v_casos_activos;
 -- Pipeline de documentos por caso
 SELECT * FROM v_pipeline_documentos;
 
--- Resultados de validación ROTH Art.204
+-- Resultados de validación ROTH Art. 204
 SELECT numero_doc, es_valido, num_errors, num_warnings
 FROM documentos ORDER BY fecha_doc DESC;
+
+-- Estadísticas del corpus procesado
+SELECT tipo_doc, COUNT(*) AS total, AVG(num_errors) AS avg_errores
+FROM documentos GROUP BY tipo_doc;
 ```
 
 ---
@@ -576,23 +461,68 @@ FROM documentos ORDER BY fecha_doc DESC;
 | Principio | Implementación |
 |---|---|
 | **Defense in Depth** | 4 capas pseudonimización + red aislada + cifrado + TTL |
-| **Zero Trust interno** | JWT obligatorio entre backend ↔ pseudonym-service |
-| **Separación técnica** | Datos personales y LLM en redes distintas sin intersección |
+| **Zero Trust interno** | JWT obligatorio entre backend ↔ pseudonym-api |
+| **Separación técnica** | `postgres_main` y `postgres_pseudonym` en contenedores aislados |
 | **Least Privilege** | Usuarios no-root en Docker (`arcotel`, `pseudonym`) |
 | **Secrets externalizados** | `.env` en `.gitignore`, sin valores en código fuente |
 | **TTL automático** | Mapeos de pseudonimización expiran en 1 hora |
 | **Logs sanitizados** | Errores no exponen detalles internos del cifrado |
 
-### Matriz de Acceso por Red
+### Matriz de Acceso por Red Docker
 
 | Servicio | main_network | pseudonym_network | internal_api | Internet |
 |---|:---:|:---:|:---:|:---:|
-| backend | ✅ | ❌ | ✅ | ✅ |
+| backend | ✅ | ❌ | ✅ | ✅ (solo Anthropic API) |
 | pseudonym-api | ❌ | ✅ | ✅ | ❌ |
 | postgres_main | ✅ | ❌ | ❌ | ❌ |
 | postgres_pseudonym | ❌ | ✅ | ❌ | ❌ |
 | vault | ❌ | ✅ | ❌ | ❌ |
 | redis | ❌ | ✅ | ✅ | ❌ |
+
+---
+
+## 🔌 API Reference
+
+### Backend (puerto 8000)
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `GET /health` | GET | Estado del sistema y versión |
+| `GET /api/archivos/listar` | GET | Lista PDFs disponibles con estado de procesamiento |
+| `POST /api/validacion/previsualizar` | POST | Genera HTML con pseudonimización para validación visual |
+| `POST /api/archivos/procesar` | POST | Procesa documentos (requiere session_id confirmado) |
+| `GET /api/casos/` | GET | Lista todos los casos PAS |
+| `GET /api/casos/{id}` | GET | Detalle de un caso específico |
+| `GET /api/casos/{id}/documentos` | GET | Documentos de un caso |
+
+### Pseudonym Service (puerto 8001 — solo red interna)
+
+| Endpoint | Método | Auth | Descripción |
+|---|---|---|---|
+| `POST /internal/pseudonymize` | POST | JWT | Pseudonimiza texto (4 capas) |
+| `POST /internal/depseudonymize` | POST | JWT | Recupera valores originales |
+| `DELETE /session/{id}` | DELETE | JWT | Limpia mapeos de sesión |
+| `GET /health` | GET | — | Estado del servicio |
+| `GET /ready` | GET | — | Readiness (verifica Vault + Redis) |
+
+### Ejemplo de flujo completo
+
+```bash
+# 1. Previsualizar (genera session_id)
+curl -X POST http://localhost:8000/api/validacion/previsualizar \
+  -H "Content-Type: application/json" \
+  -d '{"archivo": "CTDG-GE-2025-0589.pdf", "tipo_documento": "informes_tecnicos"}'
+# → {"session_id": "550e8400-e29b-41d4-a716-446655440000", "html_path": "..."}
+
+# 2. Procesar (tras confirmar que pseudonimización es correcta)
+curl -X POST http://localhost:8000/api/archivos/procesar \
+  -H "Content-Type: application/json" \
+  -d '{
+    "archivos": ["CTDG-GE-2025-0589.pdf"],
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "confirmado": true
+  }'
+```
 
 ---
 
@@ -609,63 +539,32 @@ FROM documentos ORDER BY fecha_doc DESC;
 
 ---
 
-## 🧪 Desarrollo
+## 📚 Documentación Adicional
 
-```bash
-# Ejecutar tests
-pytest backend/tests/ -v --cov=backend/app
-
-# Formatear código
-black backend/app/ && isort backend/app/
-
-# Linting y tipos
-flake8 backend/app/ && mypy backend/app/
-
-# Logs en tiempo real
-docker-compose logs -f backend
-docker-compose logs -f pseudonym-api | grep "ERROR\|WARNING"
-
-# Acceder a BD
-docker exec -it arcotel_main_db psql -U arcotel_user -d arcotel_pas
-
-# Auditoría pseudonimización
-docker exec -it arcotel_pseudonym_db psql -U pseudonym_user -d pseudonym_vault \
-  -c "SELECT * FROM pseudonym_access_log ORDER BY timestamp DESC LIMIT 20;"
-```
+- [`PSEUDONIMIZACION_ARQUITECTURA.md`](PSEUDONIMIZACION_ARQUITECTURA.md) — Arquitectura técnica detallada del módulo de pseudonimización, flujo de datos, ciclo de vida, seguridad y métricas completas por capa y tipo de entidad.
+- [`CLAUDE.md`](CLAUDE.md) — Reglas de desarrollo, patrones de código aprendidos y decisiones arquitectónicas del proyecto.
 
 ---
 
-## 📖 Documentación Adicional
+## 🗺️ Trabajo Futuro
 
-| Documento | Descripción |
-|---|---|
-| [PSEUDONIMIZACION_ARQUITECTURA.md](./PSEUDONIMIZACION_ARQUITECTURA.md) | Arquitectura completa de seguridad, justificación legal LOPDP, comandos de auditoría |
-| `http://localhost:8000/docs` | Swagger UI — documentación interactiva de la API |
-| `http://localhost:8080` | Adminer — gestión visual de bases de datos |
+El piloto cubre Módulos 1–3. El **Módulo 4 (Generación automática de documentos legales)** está fuera del alcance del presente TFE y constituye la principal línea de continuación:
 
----
-
-## 🤝 Contribuir
-
-1. Fork el repositorio
-2. Crea una rama: `git checkout -b feature/nueva-funcionalidad`
-3. Ejecuta tests: `pytest backend/tests/ -v`
-4. Abre un Pull Request
+- Generación automática de Acto de Inicio, Dictamen y Resolución mediante templates Jinja2 + LLM
+- Integración con sistema de firma electrónica FirmaEC
+- Pipeline PAS completo de 8 documentos
 
 ---
 
-## 👨‍💻 Autor
+## 👤 Autor
 
-**Iván Rodrigo Suárez Fabara**  
-*TFE — Sistema Inteligente de Análisis y Priorización de Acciones de Control Técnico Regulatorio*  
-Universidad Internacional de La Rioja (UNIR) · ARCOTEL Ecuador
+**Iván Rodrigo Suárez Fabara**
+TFE — Máster en Inteligencia Artificial
+Universidad Internacional de La Rioja (UNIR)
+Directora: Mariana Edith Miranda Varela
+Período: Noviembre 2025 – Febrero 2026
 
 ---
 
-<div align="center">
-
-**MIT License** — Copyright (c) 2026 Iván Rodrigo Suárez Fabara
-
-*Desarrollado para ARCOTEL Ecuador como Trabajo Final de Estudios (TFE)*
-
-</div>
+*Generado con datos de: `gold_standard_validacion_v2.xlsx`, `metricas_pseudonimizacion.txt`, `vp_conteos.csv`, `fn_anotaciones.csv`*
+*Última actualización: Marzo 2026*

@@ -1,0 +1,71 @@
+Fase,Numero,Archivo,Estado,CasoID,EsValido,Inconsistencias,CostoUSD,TokensInput,TokensOutput,FN_Count,Timestamp,Mensaje
+Fase1,1,CTDG-2024-GE-0032.pdf,exitoso,1,True,0,0.0262,6527,444,0,2026-02-27 18:14:18,
+Fase1,2,CTDG-2024-GE-0048.pdf,exitoso,2,True,0,0.0253,6474,395,0,2026-02-27 18:15:39,
+Fase1,3,CTDG-2024-GE-0051.pdf,rechazado_fn,,,,,,1,2026-02-27 18:17:01,FN registrados
+Fase1,4,CTDG-2025-GE-0335.pdf,exitoso,3,True,0,0.0252,6496,380,0,2026-02-27 18:17:52,
+Fase1,5,CTDG-2025-GE-0589.pdf,exitoso,4,True,0,0.0255,6529,395,0,2026-02-27 18:18:34,
+Fase1,6,CTDG-2025-GE-0592.pdf,exitoso,5,True,0,0.0264,6513,455,0,2026-02-27 18:19:14,
+Fase1,7,CTDG-2025-GE-0607.pdf,exitoso,6,True,0,0.0266,6589,454,0,2026-02-27 18:19:50,
+Fase1,8,CTDG-2025-GE-0691.pdf,rechazado_fn,,,,,,1,2026-02-27 18:20:50,FN registrados
+Fase1,9,CTDG-GE-2021-0192.pdf,rechazado_fn,,,,,,1,2026-02-27 18:22:12,FN registrados
+Fase1,10,CTDG-GE-2021-0303.pdf,exitoso,7,False,2,0.0258,6849,350,0,2026-02-27 18:23:04,
+Fase1,11,CTDG-GE-2021-0307.pdf,exitoso,8,False,2,0.0258,6850,349,0,2026-02-27 18:23:47,
+Fase1,12,CTDG-GE-2021-0370.pdf,rechazado_fn,,,,,,1,2026-02-27 18:24:49,FN registrados
+Fase1,13,CTDG-GE-2021-0371.pdf,rechazado_fn,,,,,,1,2026-02-27 18:25:39,FN registrados
+Fase1,14,CTDG-GE-2022-0169.pdf,rechazado_fn,,,,,,1,2026-02-27 18:27:22,FN registrados
+Fase1,15,CTDG-GE-2022-0299.pdf,rechazado_fn,,,,,,1,2026-02-27 18:28:39,FN registrados
+Fase1,16,CTDG-GE-2022-0382.pdf,rechazado_fn,,,,,,1,2026-02-27 18:29:35,FN registrados
+Fase1,17,CTDG-GE-2022-0392.pdf,rechazado_fn,,,,,,1,2026-02-27 18:30:33,FN registrados
+Fase1,18,CTDG-GE-2022-0435.pdf,exitoso,9,True,1,0.0271,7072,391,0,2026-02-27 18:31:09,
+Fase1,19,CTDG-GE-2022-0449.pdf,exitoso,10,True,0,0.0298,7592,470,0,2026-02-27 18:31:56,
+Fase1,20,CTDG-GE-2022-0456.pdf,exitoso,11,True,0,0.028,7473,374,0,2026-02-27 18:32:37,
+Fase1,21,CTDG-GE-2022-0461.pdf,exitoso,12,True,1,0.0268,7109,367,0,2026-02-27 18:33:12,
+Fase1,22,CTDG-GE-2022-0473.pdf,exitoso,13,True,1,0.0272,7140,385,0,2026-02-27 18:35:23,
+Fase1,23,CTDG-GE-2022-0480.pdf,exitoso,14,True,0,0.0306,8179,401,0,2026-02-27 18:36:29,
+Fase1,24,CTDG-GE-2022-0483.pdf,exitoso,15,True,0,0.0303,7936,430,0,2026-02-27 18:37:16,
+Fase1,25,CTDG-GE-2022-0485.pdf,exitoso,16,False,1,0.0297,7581,461,0,2026-02-27 18:38:02,
+Fase1,26,CTDG-GE-2022-0487.pdf,exitoso,17,True,0,0.0309,8418,376,0,2026-02-27 18:38:55,
+Fase1,27,CTDG-GE-2022-0488.pdf,exitoso,18,True,1,0.0273,7161,387,0,2026-02-27 18:39:34,
+Fase1,28,CTDG-GE-2022-0490.pdf,exitoso,19,True,0,0.031,8037,461,0,2026-02-27 18:40:22,
+Fase1,29,CTDG-GE-2023-0041.pdf,exitoso,20,False,1,0.0312,8082,462,0,2026-02-27 18:41:23,
+Fase1,30,CTDG-GE-2023-0096.pdf,exitoso,21,False,1,0.0295,7485,471,0,2026-02-27 18:42:15,
+Fase1,31,CTDG-GE-2023-0197.pdf,rechazado_fn,,,,,,1,2026-02-27 18:43:07,FN registrados
+Fase1,32,CTDG-GE-2023-0255.pdf,rechazado_fn,,,,,,1,2026-02-27 18:45:09,FN registrados
+Fase1,33,CTDG-GE-2023-0277.pdf,exitoso,22,False,1,0.0284,7084,476,0,2026-02-27 18:45:52,
+Fase1,34,CTDG-GE-2023-0497.pdf,exitoso,23,True,0,0.0298,7945,398,0,2026-02-27 18:46:48,
+Fase1,35,CTDG-GE-2024-0148.pdf,exitoso,24,True,0,0.0303,7733,473,0,2026-02-27 18:47:30,
+Fase2,1,CCDE-PR-2021-194.pdf,exitoso,7,,,0.0146,2749,426,0,2026-02-27 18:48:05,
+Fase2,2,CCDE-PR-2021-203.pdf,exitoso,8,,,0.0148,2780,433,0,2026-02-27 18:48:27,
+Fase2,3,CCDS-PR-2021-0283.pdf,rechazado_fn,,,,,,2,2026-02-27 18:49:21,FN registrados
+Fase2,4,CCDS-PR-2021-0303.pdf,rechazado_fn,,,,,,2,2026-02-27 18:50:16,FN registrados
+Fase2,5,CCDS-PR-2021-0304.pdf,rechazado_fn,,,,,,1,2026-02-27 18:51:01,FN registrados
+Fase2,6,CCDS-PR-2022-0212.pdf,error,,,,,,0,2026-02-27 18:51:24,❌ No se encontró caso PAS con informe técnico 'CTDG-GE-2022-0169' ni con formato alternativo 'CTDG-2022-GE-0169'. Debe procesarse el informe técnico ANTES de la petición razonada.
+Fase2,7,CCDS-PR-2022-0377.pdf,rechazado_fn,,,,,,1,2026-02-27 18:52:04,FN registrados
+Fase2,8,CCDS-PR-2022-0386.pdf,rechazado_fn,,,,,,2,2026-02-27 18:52:48,FN registrados
+Fase2,9,CCDS-PR-2022-269.pdf,rechazado_fn,,,,,,1,2026-02-27 18:53:31,FN registrados
+Fase2,10,CCDS-PR-2022-272.pdf,error,,,,,,0,2026-02-27 18:53:47,❌ No se encontró caso PAS con informe técnico 'CTDG-GE-2022-0299' ni con formato alternativo 'CTDG-2022-GE-0299'. Debe procesarse el informe técnico ANTES de la petición razonada.
+Fase2,11,CCDS-PR-2022-412.pdf,exitoso,11,,,0.0162,3270,423,0,2026-02-27 18:54:19,
+Fase2,12,CCDS-PR-2022-414.pdf,exitoso,10,,,0.0152,3047,402,0,2026-02-27 18:54:40,
+Fase2,13,CCDS-PR-2023-0005.pdf,exitoso,14,,,0.013,2652,334,0,2026-02-27 18:55:04,
+Fase2,14,CCDS-PR-2023-0008.pdf,exitoso,17,,,0.0132,2702,339,0,2026-02-27 18:55:22,
+Fase2,15,CCDS-PR-2023-0011.pdf,rechazado_fn,,,,,,1,2026-02-27 18:55:49,FN registrados
+Fase2,16,CCDS-PR-2023-0012.pdf,exitoso,15,,,0.0137,2765,360,0,2026-02-27 18:56:10,
+Fase2,17,CCDS-PR-2023-0018.pdf,exitoso,13,,,0.0132,2599,358,0,2026-02-27 18:56:29,
+Fase2,18,CCDS-PR-2023-0021.pdf,exitoso,18,,,0.0133,2629,363,0,2026-02-27 18:56:45,
+Fase2,19,CCDS-PR-2023-0022.pdf,rechazado_fn,,,,,,1,2026-02-27 18:57:11,FN registrados
+Fase2,20,CCDS-PR-2023-0030.pdf,rechazado_fn,,,,,,1,2026-02-27 18:57:45,FN registrados
+Fase2,21,CCDS-PR-2023-0036.pdf,rechazado_fn,,,,,,1,2026-02-27 18:58:10,FN registrados
+Fase2,22,CCDS-PR-2023-0090.pdf,exitoso,21,,,0.0132,2614,359,0,2026-02-27 18:58:29,
+Fase2,23,CCDS-PR-2023-0156.pdf,error,,,,,,0,2026-02-27 18:58:54,❌ No se encontró caso PAS con informe técnico 'CTDG-GE-2023-0197' ni con formato alternativo 'CTDG-2023-GE-0197'. Debe procesarse el informe técnico ANTES de la petición razonada.
+Fase2,24,CCDS-PR-2023-0194.pdf,rechazado_fn,,,,,,1,2026-02-27 18:59:39,FN registrados
+Fase2,25,CCDS-PR-2023-0255.pdf,exitoso,22,,,0.013,2655,335,0,2026-02-27 18:59:57,
+Fase2,26,PR-CCDS-2024-0050.pdf,exitoso,23,,,0.0153,3002,418,0,2026-02-27 19:00:20,
+Fase2,27,PR-CCDS-2024-0129.pdf,exitoso,24,,,0.0133,2751,335,0,2026-02-27 19:00:56,
+Fase2,28,PR-CTDG-2024-GE-0032.pdf,rechazado_fn,,,,,,1,2026-02-27 19:01:24,FN registrados
+Fase2,29,PR-CTDG-2024-GE-0048.pdf,exitoso,2,,,0.015,3077,383,0,2026-02-27 19:01:48,
+Fase2,30,PR-CTDG-2024-GE-0051.pdf,error,,,,,,0,2026-02-27 19:02:21,❌ No se encontró caso PAS con informe técnico 'CTDG-GE-2024-0051' ni con formato alternativo 'CTDG-2024-GE-0051'. Debe procesarse el informe técnico ANTES de la petición razonada.
+Fase2,31,PR-CTDG-2025-GE-0335.pdf,exitoso,3,,,0.0146,3030,370,0,2026-02-27 19:02:53,
+Fase2,32,PR-CTDG-2025-GE-0589.pdf,exitoso,4,,,0.0146,3030,369,0,2026-02-27 19:03:15,
+Fase2,33,PR-CTDG-2025-GE-0592.pdf,rechazado_fn,,,,,,1,2026-02-27 19:03:45,FN registrados
+Fase2,34,PR-CTDG-2025-GE-0607.pdf,exitoso,6,,,0.0146,3034,369,0,2026-02-27 19:04:14,
+Fase2,35,PR-CTDG-2025-GE-0691.pdf,rechazado_fn,,,,,,1,2026-02-27 19:04:45,FN registrados

@@ -142,6 +142,7 @@ cython_debug/
 # ============================================
 # DATOS Y RESULTADOS
 # ============================================
+# Directorio data/ ignorado (contiene PDFs confidenciales de ARCOTEL)
 data/
 !data/.gitkeep
 resultados/
@@ -151,14 +152,30 @@ logs/
 backups/
 !backups/.gitkeep
 
-# PDFs y documentos
+# PDFs y documentos Office — ignorar por defecto
 *.pdf
 *.docx
+
+# Hojas de cálculo — ignorar por defecto
+# EXCEPCIONES: archivos de evaluación del piloto (Anexos C y D del TFE)
 *.xlsx
+!gold_standard_validacion.xlsx
+!metricas_pseudonimizacion.xlsx
+
+# CSV — ignorar por defecto
+# EXCEPCIONES: datos empíricos del piloto (Anexos C y D del TFE)
 *.csv
+!vp_conteos.csv
+!fn_anotaciones.csv
+!reporte_corpus_*.csv
+
+# JSON — ignorar por defecto
+# EXCEPCIONES: schemas y ejemplos del código
 *.json
 !**/schema.json
 !**/example.json
+# progreso_sesion.json contiene estado interno de sesión — ignorar explícitamente
+progreso_sesion.json
 
 # Bases de datos
 *.db
@@ -285,7 +302,7 @@ temp/
 # ============================================
 # ESPECÍFICO DEL PROYECTO
 # ============================================
-# Resultados de experimentos
+# Resultados de experimentos internos
 experimento_*.json
 validaciones_*.json
 metricas_*.json
@@ -297,12 +314,12 @@ metricas_*.json
 !docs/images/*.png
 !docs/images/*.jpg
 
-# Logs de procesamiento
+# Logs de procesamiento y sesión
 procesamiento_*.log
 extraccion_*.log
+logs_pseudonym.txt
 
 # ============================================
 # MANTENER DIRECTORIOS VACÍOS
 # ============================================
 !.gitkeep
-logs_pseudonym.txt

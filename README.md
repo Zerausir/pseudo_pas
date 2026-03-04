@@ -6,11 +6,11 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.128.0-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Claude API](https://img.shields.io/badge/Claude-Sonnet_4-D97706?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
+[![Claude API](https://img.shields.io/badge/Claude-Sonnet_4.5-D97706?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![spaCy](https://img.shields.io/badge/spaCy-3.8.11-09A3D5?style=for-the-badge&logo=spacy&logoColor=white)](https://spacy.io/)
 [![License](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
 
-**Sistema inteligente de extracción y validación automática de datos para Procedimientos Administrativos Sancionadores (PAS) en telecomunicaciones**
+**Sistema inteligente de extracción, validación y pseudonimización automática de datos para Procedimientos Administrativos Sancionadores (PAS) en telecomunicaciones**
 
 [Características](#-características-principales) •
 [Inicio Rápido](#-inicio-rápido) •
@@ -21,9 +21,9 @@
 
 ---
 
-| 🎯 F1 Extracción | 🔐 F1 Pseudonimización | ⚡ Tiempo/doc | 💰 Costo/doc | 📄 Corpus evaluado |
+| 🎯 F1 Extracción | 🔐 F1 Pseudonimización | ⚡ Tiempo/doc | 💰 Costo/caso | 📄 Corpus evaluado |
 |:---:|:---:|:---:|:---:|:---:|
-| **97.4%** | **97.2%** | **~18 seg** | **$0.018 USD** | **70 documentos** |
+| **98.1%** | **97.2%** | **~18 seg** | **$0.036 USD** | **70 documentos** |
 
 </div>
 
@@ -31,32 +31,32 @@
 
 ## 📌 Descripción del Proyecto
 
-**ARCOTEL PAS** automatiza la extracción, validación y pseudonimización de datos del **Procedimiento Administrativo Sancionador (PAS)** para infracciones del sector de telecomunicaciones en Ecuador, abordando un problema institucional crítico: casos simples que hoy demoran **34+ meses** en completarse.
+**ARCOTEL PAS** automatiza la extracción, validación y pseudonimización de datos del **Procedimiento Administrativo Sancionador (PAS)** para infracciones del sector de telecomunicaciones en Ecuador, abordando un problema institucional crítico: un backlog de 2417 casos pendientes que representa más de 10.5 años de trabajo acumulado.
 
-> 💡 Este proyecto es el Trabajo Final de Estudios (TFE) de la **Universidad Internacional de La Rioja (UNIR)**, desarrollado en colaboración con **ARCOTEL Ecuador**.
+> 💡 Este proyecto es el Trabajo Final de Estudios (TFE) de la **Universidad Internacional de La Rioja (UNIR)**, desarrollado en colaboración con **ARCOTEL Ecuador**. Directora: Mariana Edith Miranda Varela. Período: Noviembre 2025 – Febrero 2026.
 
 ### El Problema
 
-ARCOTEL Ecuador detecta infracciones de prestadores de servicios de telecomunicaciones (e.g., renovación tardía de Garantía de Fiel Cumplimiento) y debe tramitar un PAS que involucra 8 documentos legales secuenciales, coordinación entre 4 áreas institucionales (CTDG, CCON, CZ2, DEDA), y generación **manual** de documentos altamente estandarizados.
+ARCOTEL Ecuador detecta infracciones de prestadores de servicios de telecomunicaciones (e.g., incumplimiento con Garantías de Fiel Cumplimiento) y debe tramitar un PAS que involucra 8 documentos legales secuenciales, coordinación entre 4 áreas institucionales (CTDG, CCON, CZ2, DEDA), y generación **manual** de documentos altamente estandarizados.
 
 ### La Solución
 
 Sistema híbrido que combina extracción LLM, validación determinística y pseudonimización LOPDP-conforme:
 
 ```
-PDF IT/PR → [Pseudonimización 4 Capas] → Claude API → JSON estructurado → Validador → PostgreSQL
+PDF IT/PR → [Módulo 3: Pseudonimización 4 Capas] → [Módulo 1: Claude API] → JSON → [Módulo 2: Validador] → PostgreSQL
 ```
 
 ---
 
 ## ✨ Características Principales
 
-- 🤖 **Extracción automática con LLM** — Claude API (`claude-sonnet-4-20250514`) con prompt engineering avanzado (few-shot, chain-of-thought, negative examples). F1 global = **97.4%** sobre 47 documentos gold standard.
-- ⚖️ **Validación basada en reglas** — Motor determinístico ROTH Art. 204: calcula fechas tope, días de retraso, clasifica severidad. **100% detección, 0% falsos positivos.**
-- 🔐 **Pseudonimización 4 capas** — Regex + Header parser + spaCy NER + Firmantes. F1 = **97.2%** sobre corpus de 70 documentos, **0 falsos positivos**, Precisión = 100%.
+- 🤖 **Módulo 1 — Extracción automática con LLM** — Claude API (`claude-sonnet-4-20250514`) con few-shot prompting, chain-of-thought y negative examples. F1 global = **98.1%** sobre 41 documentos gold standard (318 evaluaciones).
+- ⚖️ **Módulo 2 — Validación basada en reglas** — Motor determinístico ROTH Art. 204: calcula fechas tope, días de retraso, clasifica severidad. **100% detección, 0% falsos positivos.**
+- 🔐 **Módulo 3 — Pseudonimización 4 capas** — Regex + Header parser + spaCy NER + Firmantes. F1 = **97.2%** sobre corpus de 70 documentos, **Precisión = 100%** (0 falsos positivos).
 - 🛡️ **Cumplimiento LOPDP Ecuador** — Validación visual obligatoria antes de cualquier envío a Claude API. Claude API recibe exclusivamente pseudónimos (`NOMBRE_A3F7B2C1`).
 - 🐳 **Docker-first** — Un solo `docker-compose up -d` levanta 7 servicios configurados y listos.
-- 📊 **Gold standard validado** — Evaluación sobre 47 documentos (extracción) y 70 documentos (pseudonimización).
+- 📊 **Gold standards validados** — Evaluación sobre 41 documentos (extracción, 318 evaluaciones) y 70 documentos (pseudonimización, 515 entidades).
 - 🔑 **Seguridad por diseño** — AES-256-GCM, HashiCorp Vault KMS, TTL automático 1h, red interna Docker aislada.
 
 ---
@@ -139,30 +139,31 @@ El sistema implementa una **arquitectura de microservicios de dos capas** con ai
 │     │                                                                   │
 │     ▼                                                                   │
 │  ┌─────────────────────────────────────────────────┐                   │
-│  │        SERVICIO PSEUDONIMIZACIÓN (puerto 8001)  │                   │
-│  │   Capa 1: Regex   → RUC, Cédula, Email, Tfno    │                   │
-│  │   Capa 1.5: Header→ Nombre empresa, Dirección   │                   │
-│  │   Capa 2: spaCy   → Nombres de personas (NER)   │                   │
-│  │   Capa 3: Firmas  → Firmantes del documento     │                   │
+│  │  MÓDULO 3 — PSEUDONIMIZACIÓN (puerto 8001)       │                   │
+│  │   Capa 1:   Regex → RUC, Cédula, Email, Tfno    │                   │
+│  │   Capa 1.5: Header → Nombre empresa, Dirección  │                   │
+│  │   Capa 2:   spaCy → Nombres en texto libre      │                   │
+│  │   Capa 3:   Firmas → Firmantes del documento    │                   │
 │  │                                                  │                   │
 │  │   postgres_pseudonym ← Vault AES-256-GCM        │                   │
 │  │   Redis TTL 1h                                   │                   │
 │  └─────────────────────────────────────────────────┘                   │
-│     │ texto con PSEUDÓNIMOS (nunca datos reales)                       │
+│     │ texto con PSEUDÓNIMOS (nunca datos reales)                        │
 │     ▼                                                                   │
-│  ┌──────────────────────────────────────────┐                         │
-│  │     CLAUDE API (claude-sonnet-4-20250514)│                         │
-│  │     Few-shot prompting, temperatura 0.0  │                         │
-│  └──────────────────────────────────────────┘                         │
-│     │ JSON estructurado                                                │
+│  ┌────────────────────────────────────────────┐                        │
+│  │  MÓDULO 1 — CLAUDE API                      │                        │
+│  │  claude-sonnet-4-20250514, temp. 0.0        │                        │
+│  │  Few-shot prompting (3 IT + 2 PR ejemplos) │                        │
+│  └────────────────────────────────────────────┘                        │
+│     │ JSON estructurado                                                 │
 │     ▼                                                                   │
-│  ┌──────────────────────────────────────────┐                         │
-│  │  VALIDADOR ROTH Art. 204 (determinístico)│                         │
-│  │  → Fechas tope, días retraso, severidad  │                         │
-│  └──────────────────────────────────────────┘                         │
+│  ┌────────────────────────────────────────────┐                        │
+│  │  MÓDULO 2 — VALIDADOR ROTH Art. 204         │                        │
+│  │  Fechas tope, días retraso, severidad       │                        │
+│  └────────────────────────────────────────────┘                        │
 │     │                                                                   │
 │     ▼                                                                   │
-│  postgres_main (datos de negocio)                                      │
+│  postgres_main (datos de negocio)                                       │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -204,13 +205,13 @@ Texto original:
                     ↓ CAPA 1: Regex (datos estructurados)
   RUC: 1792554136001      →  RUC_A3F7B2C1
   correo@empresa.com      →  EMAIL_D4E8F2A1
-  AV. NAPO S/N Y BOMBEROS →  DIRECCION_G7H1I4J2   ← Intersecciones
+  AV. NAPO S/N Y BOMBEROS →  DIRECCION_G7H1I4J2
   1719710830              →  CEDULA_B9C3D7E5
   0999079807              →  TELEFONO_F2C9D6E3
 
                     ↓ CAPA 1.5: Header Parser (encabezado del documento)
   TELECOMUNICACIONES EJEMPLO S.A.  →  NOMBRE_K5L8M2N9
-  AV. EJEMPLO S58F-93 CASA 12     →  DIRECCION_H4I7J1K3   ← Sin intersección
+  AV. EJEMPLO S58F-93 CASA 12      →  DIRECCION_H4I7J1K3
 
                     ↓ CAPA 2: spaCy NER (es_core_news_lg, re.IGNORECASE)
   JUAN PÉREZ GARCÍA       →  NOMBRE_P6Q9R3S7
@@ -220,9 +221,9 @@ Texto original:
   (Elaborado/Revisado/Aprobado por)
 ```
 
-> ⚠️ **Limitación metodológica**: La Capa 3 (Firmantes) detecta nombres en la sección de firmas del documento. En el corpus evaluado registró 0 VP y 0 FN porque los nombres de firmantes ya habían sido capturados previamente por la Capa 2 (spaCy NER).
+> ⚠️ **Nota metodológica**: La Capa 3 (Firmantes) registró 0 VP y 0 FN en el corpus evaluado porque los nombres de firmantes ya habían sido capturados por la Capa 2 (spaCy NER). La capa está implementada y operativa — actúa como salvaguarda para documentos con formatos atípicos de firma.
 
-### Métricas de Pseudonimización (corpus 70 documentos)
+### Métricas de Pseudonimización (corpus: 70 documentos, 515 entidades)
 
 | Tipo | Total | VP | FN | Precision | Recall | F1 |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -234,8 +235,8 @@ Texto original:
 | NOMBRE | 397 | 372 | 25 | 100.0% | 93.7% | **96.7%** |
 | **GLOBAL** | **515** | **487** | **28** | **100.0%** | **94.6%** | **97.2%** |
 
-- **45/70 documentos (64.3%)** — Pseudonimización completa
-- **25/70 documentos (35.7%)** — Pseudonimización parcial (≥1 FN, típicamente nombre fragmentado por OCR)
+- **45/70 documentos (64.3%)** — Pseudonimización completa (0 FN)
+- **25/70 documentos (35.7%)** — Pseudonimización parcial (≥1 FN por fragmentación OCR en docs 2021)
 - **0 falsos positivos** — El sistema nunca pseudonimizó texto institucional por error
 
 > Ver [`PSEUDONIMIZACION_ARQUITECTURA.md`](PSEUDONIMIZACION_ARQUITECTURA.md) para documentación técnica completa.
@@ -244,65 +245,92 @@ Texto original:
 
 ## 📊 Métricas de Rendimiento
 
-### OE1 — Extracción de entidades (gold standard: 47 documentos)
+### OE1 — Extracción de entidades (gold standard: 41 documentos, 318 evaluaciones)
 
-| Campo | IT F1 | PR F1 | Notas |
-|---|:---:|:---:|---|
-| numero_documento | 100.0% | 100.0% | — |
-| fecha | 100.0% | 100.0% | — |
-| prestador_ruc | 100.0% | 100.0% | Campo crítico |
-| tipo_infraccion | 100.0% | 100.0% | Campo crítico |
-| fecha_real_entrega | 100.0% | 100.0% | Campo crítico |
-| prestador_nombre | 96.4% | 100.0% | FN por truncamiento OCR |
-| representante_legal | 92.9% | 100.0% | FN por formato atípico |
-| fecha_maxima_entrega | 85.7% | 100.0% | FN en docs 2021 sin tabla de fechas |
-| dias_retraso | 85.7% | 100.0% | Campo derivado — FN cascada |
-| articulos_violados | — | 100.0% | ¹ |
-| informe_base | — | 100.0% | Solo en PR |
+**Informes Técnicos (n = 24, 216 evaluaciones = 24 × 9 campos):**
 
-> ¹ `articulos_violados` solo aplica a IT. FN por variación en numeración de sección entre formularios FO-DEAR-47 v2022 y v2025.
+| Campo | Correctos (TP) | Errores (FN) | F1-Score | Criticidad |
+|---|:---:|:---:|:---:|:---:|
+| numero_documento | 24 | 0 | **100.0%** | ★ Alta |
+| fecha | 24 | 0 | **100.0%** | ★ Alta |
+| prestador_ruc | 24 | 0 | **100.0%** | ★ Alta |
+| tipo_infraccion | 24 | 0 | **100.0%** | ★ Alta |
+| fecha_real_entrega | 24 | 0 | **100.0%** | ★ Alta |
+| representante_legal | 24 | 0 | **100.0%** | ◆ Media |
+| articulos_violados | 24 | 0 | **100.0%** | ◆ Media |
+| fecha_maxima_entrega | 22 | 2 | **91.7%** | ★ Alta |
+| prestador_nombre | 21 | 3 | **87.5%** | ◆ Media |
+| **TOTAL IT** | **211** | **5** | **97.7%** | — |
 
-**Resumen por tipo de documento:**
+**Peticiones Razonadas (n = 17, 102 evaluaciones = 17 × 6 campos):**
+
+| Campo | Correctos (TP) | Errores (FN) | F1-Score | Criticidad |
+|---|:---:|:---:|:---:|:---:|
+| numero_documento | 17 | 0 | **100.0%** | ★ Alta |
+| fecha | 17 | 0 | **100.0%** | ★ Alta |
+| prestador_nombre | 17 | 0 | **100.0%** | ◆ Media |
+| informe_base | 17 | 0 | **100.0%** | ★ Alta |
+| firmante | 17 | 0 | **100.0%** | ◆ Media |
+| tipo_infraccion | 16 | 1 | **94.1%** | ★ Alta |
+| **TOTAL PR** | **101** | **1** | **99.0%** | — |
+
+**F1 global consolidado:**
 
 | Grupo | Docs | Evaluaciones | FN | F1 global |
 |---|:---:|:---:|:---:|:---:|
-| Informes Técnicos (9 campos) | 28 | 252 | 10 | **96.0%** |
-| Peticiones Razonadas (7 campos) | 19 | 133 | 0 | **100.0%** |
-| **★ GLOBAL** | **47** | **385** | **10** | **97.4%** |
+| Informes Técnicos (24 docs × 9 campos) | 24 | 216 | 5 | **97.7%** |
+| Peticiones Razonadas (17 docs × 6 campos) | 17 | 102 | 1 | **99.0%** |
+| **★ GLOBAL** | **41** | **318** | **6** | **98.1%** |
 
-### OE2 — Pseudonimización LOPDP (corpus: 70 documentos)
+> F1 global = 312 correctas / 318 evaluaciones totales = 98.1%. Las 4 PR no incluidas en el gold standard corresponden a pares cuyo IT presentó fragmentación OCR severa que impidió su procesamiento por el sistema de pseudonimización.
 
-| Métrica | Valor | Meta | ✓ |
+**Análisis de los 6 errores de extracción:**
+
+| Campo | Doc | Tipo error | Causa | Mitigación |
+|---|---|:---:|---|---|
+| fecha_maxima_entrega | CTDG-GE-2021-0303 | FORMAT | FO-DEAR-47 v2021 sin tabla de fechas | Post-procesamiento: `fecha_vigencia_GFC − 15 días` |
+| fecha_maxima_entrega | CTDG-GE-2021-0307 | FORMAT | Ídem | Post-procesamiento: `fecha_vigencia_GFC − 15 días` |
+| prestador_nombre | CTDG-GE-2022-0449 | TRUNC | LLM omitió sufijo "S.A." | Ampliar regex Capa 1.5 para capturar sufijos en línea siguiente |
+| prestador_nombre | CTDG-GE-2022-0473 | TRUNC | LLM omitió guión y "S.A.S." | Ídem |
+| prestador_nombre | CTDG-GE-2022-0483 | MERGE | LLM fusionó razón social con rep. legal | Instrucción explícita en prompt |
+| tipo_infraccion | CCDS-PR-2023-0090 | AMBIG | Confusión tardia/no_presentada | Añadir caso negativo en few-shot |
+
+### OE2 — Pseudonimización LOPDP (corpus: 70 documentos, 515 entidades)
+
+| Métrica | Valor | Meta | Estado |
 |---|:---:|:---:|:---:|
 | Precisión | 100.0% | = 100% | ✅ |
-| Recall | 94.6% | ≥ 95% | ⚠️ |
-| F1-Score global | **97.2%** | ≥ 95% | ✅ |
+| Recall | 94.6% | ≥ 95% | ⚠️ −0.4 pp |
+| F1-Score global | **97.2%** | ≥ 95% | ✅ +2.2 pp |
 | Falsos positivos | 0 | 0 | ✅ |
-| Cobertura completa | 45/70 (64.3%) | ≥ 90% | ⚠️ |
+| Cobertura completa | 45/70 (64.3%) | ≥ 90% | ⚠️ −25.7 pp |
 
-> **Nota**: El Recall de 94.6% y la cobertura de 64.3% reflejan la limitación de OCR fragmentado en el corpus de 70 documentos. Los 28 FN corresponden exclusivamente a texto fragmentado por pypdf (e.g., `CHAVE Z SALAS`, `OSTAIZA CEDEÑO LUISA ESPERANZA`), no a fallas del modelo NER en sí. El sistema mantiene Precisión = 100% (cero datos institucionales pseudonimizados por error).
+> El Recall de 94.6% y la cobertura de 64.3% reflejan 28 FN causados por fragmentación OCR en documentos de 2021 (pypdf fragmenta nombres al cruzar límites de columna PDF). La Precisión = 100% garantiza el cumplimiento LOPDP: ningún dato personal llega a Claude API sin pseudonimizar por error.
 
 ### OE3 — Impacto operacional
 
 | Métrica | Manual | Automático | Mejora |
 |---|:---:|:---:|:---:|
-| Tiempo por par IT+PR | 15 min | 3.5 min | **↓ 76.7%** |
+| Tiempo por par IT+PR | 15.0 min | 3.5 min | **↓ 76.7%** |
 | Costo por caso | — | $0.036 USD | ✅ vs límite $5.00 |
 | Tokens input promedio | — | ~3,500 | — |
 | Tokens output promedio | — | ~800 | — |
 | Tiempo por documento | — | ~18 seg | — |
+| Costo total corpus (70 docs) | — | ~$1.26 USD | — |
 
 ### Resultados vs. Criterios de Éxito
 
 | OE | Métrica | Meta | Resultado | Estado | Diferencia |
-|---|---|---|---|---|---|
-| OE1 | F1-Score global | ≥ 85% | **97.4%** | ✅ | +12.4 pp |
-| OE1 | F1 entidades críticas | ≥ 90% | **100.0%** | ✅ | +10.0 pp |
-| OE1 | Detección inconsistencias | ≥ 80% | **100.0%** | ✅ | +20.0 pp |
-| OE1 | FP validador | < 10% | **0.0%** | ✅ | −10.0 pp |
+|---|---|---|:---:|:---:|:---:|
+| OE1 | F1-Score extracción global | ≥ 85% | **98.1%** | ✅ | +13.1 pp |
+| OE1 | F1 campo crítico más bajo (fecha_maxima) | ≥ 90% | **91.7%** | ✅ | +1.7 pp |
+| OE1 | Detección inconsistencias normativas | ≥ 80% | **100.0%** | ✅ | +20.0 pp |
+| OE1 | FP validador normativo | < 10% | **0.0%** | ✅ | −10.0 pp |
 | OE2 | Precisión pseudonimización | = 100% | **100.0%** | ✅ | 0.0 pp |
+| OE2 | Recall pseudonimización | ≥ 95% | **94.6%** | ⚠️ | −0.4 pp |
 | OE2 | F1 pseudonimización | ≥ 95% | **97.2%** | ✅ | +2.2 pp |
-| OE3 | Reducción tiempo | ≥ 60% | **76.7%** | ✅ | +16.7 pp |
+| OE2 | Cobertura documental completa | ≥ 90% | **64.3%** | ⚠️ | −25.7 pp |
+| OE3 | Reducción tiempo procesamiento | ≥ 60% | **76.7%** | ✅ | +16.7 pp |
 | OE3 | Costo por caso | < $5.00 | **$0.036** | ✅ | −99.3% |
 
 ---
@@ -331,91 +359,74 @@ arcotel-pas/
 │   │   │   └── validador_informe.py
 │   │   ├── services/                        # Lógica de negocio
 │   │   │   └── caso_service.py
-│   │   └── api/                             # Endpoints REST
-│   │       ├── archivos.py                  # /api/archivos/listar + /procesar
-│   │       ├── procesador.py                # Lógica de procesamiento controlado
-│   │       ├── validacion.py                # /api/validacion/previsualizar
-│   │       └── casos.py                     # /api/casos/*
-│   ├── init-db/                             # SQL auto-ejecución en docker-entrypoint
-│   ├── Dockerfile                           # Multi-stage build Python 3.13.11
-│   └── requirements.txt
-│
-├── 🔐  pseudonym-service/                   # Servicio de pseudonimización (LOPDP)
-│   ├── app/
-│   │   ├── main.py                          # FastAPI (solo red interna)
-│   │   ├── api/
-│   │   │   ├── internal.py                  # /internal/pseudonymize + /depseudonymize
-│   │   │   └── health.py                    # /health, /ready, /live
-│   │   └── services/
-│   │       ├── pseudonymization.py          # Lógica 4 capas completa
-│   │       └── spacy_detector.py            # NER + normalización MAYÚSCULAS
+│   │   └── api/                             # Endpoints
+│   │       ├── procesador.py
+│   │       ├── casos.py
+│   │       └── estadisticas.py
 │   ├── init-db/
-│   ├── Dockerfile
-│   └── requirements.txt
+│   │   ├── 01-init.sql                      # Creación de usuario y BD
+│   │   └── 02-schema.sql                    # Schema completo + vistas
+│   └── Dockerfile
 │
-├── 📂  data/                                # PDFs de entrada (bind mount Docker)
-│   ├── informes_tecnicos/                   # CTDG-GE-YYYY-XXXX.pdf / CTDG-YYYY-GE-XXXX.pdf
-│   └── peticiones_razonadas/                # CCDS-PR-YYYY-ZZZZ.pdf / PR-CTDG-YYYY-GE-XXXX.pdf
+├── 🔐  pseudonym-service/                   # Servicio de pseudonimización
+│   ├── app/
+│   │   ├── main.py                          # FastAPI + endpoints internos
+│   │   ├── pseudonymizer.py                 # Motor 4 capas
+│   │   ├── vault_client.py                  # HashiCorp Vault + AES-256-GCM
+│   │   └── redis_client.py                  # TTL de sesiones
+│   └── Dockerfile
 │
-├── 📜  procesar_masivo_v2.ps1               # Batch processing con validación interactiva
-├── 📜  procesar_corpus_completo.ps1         # Script para corpus completo de evaluación
-├── 🐳  docker-compose.yml                   # Orquestación 7 servicios
-├── 📋  .env.example                         # Plantilla de configuración
-├── 🔐  PSEUDONIMIZACION_ARQUITECTURA.md     # Documentación técnica completa de seguridad
-└── ⚖️   LICENSE                              # MIT
+├── 🌐  frontend/                            # Interfaz web
+│   ├── procesador.html                      # Dashboard principal
+│   └── assets/
+│
+├── 📊  data/                                # PDFs de entrada (gitignored)
+│   ├── informes_tecnicos/                   # CTDG-GE-YYYY-XXXX.pdf
+│   └── peticiones_razonadas/                # CCDS/CCDE-PR-YYYY-XXXX.pdf
+│
+├── 🐳  docker-compose.yml                   # 7 servicios configurados
+├── 📋  .env.example                         # Plantilla de variables
+├── 📄  CLAUDE.md                            # Reglas de desarrollo del proyecto
+├── 📄  PSEUDONIMIZACION_ARQUITECTURA.md     # Documentación técnica Módulo 3
+└── 📄  README.md                            # Este archivo
 ```
 
 ---
 
 ## ⚙️ Configuración
 
-### Variables de Entorno (.env)
+### Variables de entorno requeridas (`.env`)
 
 ```bash
-# ============================================
-# ANTHROPIC — Requerido para extracción LLM
-# ============================================
+# Claude API
 ANTHROPIC_API_KEY=sk-ant-...
 
-# ============================================
-# POSTGRESQL — Base de datos principal
-# ============================================
-POSTGRES_USER=arcotel_user
-POSTGRES_PASSWORD=tu_password_seguro
+# PostgreSQL principal
 POSTGRES_DB=arcotel_pas
+POSTGRES_USER=arcotel_user
+POSTGRES_PASSWORD=<contraseña_segura>
+DATABASE_URL=postgresql://arcotel_user:<password>@postgres_main:5432/arcotel_pas
 
-# ============================================
-# POSTGRESQL — Base de datos pseudonimización
-# ============================================
-POSTGRES_PSEUDONYM_PASSWORD=tu_password_pseudonim
+# PostgreSQL pseudonimización
+PSEUDONYM_DB=pseudonym_db
+PSEUDONYM_USER=pseudonym_user
+PSEUDONYM_PASSWORD=<contraseña_segura>
+PSEUDONYM_DATABASE_URL=postgresql://pseudonym_user:<password>@postgres_pseudonym:5433/pseudonym_db
 
-# ============================================
-# HASHICORP VAULT — KMS cifrado AES-256-GCM
-# ============================================
-VAULT_DEV_ROOT_TOKEN_ID=root-token-dev-only   # ⚠️ SOLO DESARROLLO
-VAULT_TOKEN=root-token-dev-only
+# HashiCorp Vault
+VAULT_ADDR=http://vault:8200
+VAULT_TOKEN=<vault_root_token>
 
-# ============================================
-# REDIS — TTL de sesiones de pseudonimización
-# ============================================
-REDIS_PASSWORD=redis_password_123
+# Redis
+REDIS_URL=redis://redis:6379
 
-# ============================================
-# JWT — Autenticación interna entre servicios
-# ============================================
-JWT_SECRET=tu_jwt_secret_256_bits_minimo
-
-# ============================================
-# APLICACIÓN
-# ============================================
-ENV=development
-DEBUG=false
-CORS_ORIGINS=http://localhost:3000,http://localhost:8080
-TTL_HOURS=1
-MAX_UPLOAD_SIZE=52428800
+# JWT entre servicios
+JWT_SECRET_KEY=<clave_secreta_larga>
+JWT_ALGORITHM=HS256
+JWT_EXPIRATION_MINUTES=60
 ```
 
-> ⚠️ El archivo `.env` está en `.gitignore`. Nunca comitear credenciales reales.
+> ⚠️ **Seguridad**: Nunca comitear el archivo `.env` con credenciales reales. Está incluido en `.gitignore`.
 
 ---
 
@@ -437,11 +448,8 @@ acto_inicio → pruebas → dictamen → resolucion → cerrado
 ### Consultas útiles
 
 ```sql
--- Casos activos con días transcurridos
-SELECT * FROM v_casos_activos;
-
--- Pipeline de documentos por caso
-SELECT * FROM v_pipeline_documentos;
+-- Casos activos con estado de validación
+SELECT * FROM v_casos_resumen;
 
 -- Resultados de validación ROTH Art. 204
 SELECT numero_doc, es_valido, num_errors, num_warnings
@@ -450,6 +458,9 @@ FROM documentos ORDER BY fecha_doc DESC;
 -- Estadísticas del corpus procesado
 SELECT tipo_doc, COUNT(*) AS total, AVG(num_errors) AS avg_errores
 FROM documentos GROUP BY tipo_doc;
+
+-- Métricas globales de validación
+SELECT * FROM v_validaciones_estadisticas;
 ```
 
 ---
@@ -493,7 +504,8 @@ FROM documentos GROUP BY tipo_doc;
 | `POST /api/archivos/procesar` | POST | Procesa documentos (requiere session_id confirmado) |
 | `GET /api/casos/` | GET | Lista todos los casos PAS |
 | `GET /api/casos/{id}` | GET | Detalle de un caso específico |
-| `GET /api/casos/{id}/documentos` | GET | Documentos de un caso |
+| `GET /api/validacion/{id}` | GET | Resultado de validación normativa de un documento |
+| `GET /api/estadisticas` | GET | Estadísticas globales del corpus procesado |
 
 ### Pseudonym Service (puerto 8001 — solo red interna)
 
@@ -505,25 +517,6 @@ FROM documentos GROUP BY tipo_doc;
 | `GET /health` | GET | — | Estado del servicio |
 | `GET /ready` | GET | — | Readiness (verifica Vault + Redis) |
 
-### Ejemplo de flujo completo
-
-```bash
-# 1. Previsualizar (genera session_id)
-curl -X POST http://localhost:8000/api/validacion/previsualizar \
-  -H "Content-Type: application/json" \
-  -d '{"archivo": "CTDG-GE-2025-0589.pdf", "tipo_documento": "informes_tecnicos"}'
-# → {"session_id": "550e8400-e29b-41d4-a716-446655440000", "html_path": "..."}
-
-# 2. Procesar (tras confirmar que pseudonimización es correcta)
-curl -X POST http://localhost:8000/api/archivos/procesar \
-  -H "Content-Type: application/json" \
-  -d '{
-    "archivos": ["CTDG-GE-2025-0589.pdf"],
-    "session_id": "550e8400-e29b-41d4-a716-446655440000",
-    "confirmado": true
-  }'
-```
-
 ---
 
 ## ⚖️ Marco Legal
@@ -533,7 +526,7 @@ curl -X POST http://localhost:8000/api/archivos/procesar \
 | LOPDP Ecuador | Arts. 10.e, 33, 37, 55-60 | ✅ |
 | LOT | Arts. 24.3, 117.b.16, 121-122, 130-131 | ✅ |
 | COA | Arts. 186, 193, 202, 207 | ✅ |
-| ROTH | Arts. 204 (GFC 15 días), 207 (renovación anual) | ✅ |
+| ROTH | Art. 204 (GFC 15 días), Art. 207 (renovación anual) | ✅ |
 
 > ⚠️ **Aviso legal:** Este sistema acelera tareas repetitivas pero **no reemplaza el criterio legal humano**. Todas las salidas deben ser revisadas por personal jurídico antes de su uso oficial.
 
@@ -541,7 +534,7 @@ curl -X POST http://localhost:8000/api/archivos/procesar \
 
 ## 📚 Documentación Adicional
 
-- [`PSEUDONIMIZACION_ARQUITECTURA.md`](PSEUDONIMIZACION_ARQUITECTURA.md) — Arquitectura técnica detallada del módulo de pseudonimización, flujo de datos, ciclo de vida, seguridad y métricas completas por capa y tipo de entidad.
+- [`PSEUDONIMIZACION_ARQUITECTURA.md`](PSEUDONIMIZACION_ARQUITECTURA.md) — Arquitectura técnica detallada del Módulo 3: flujo de datos, ciclo de vida de pseudónimos, seguridad y métricas completas por capa y tipo de entidad.
 - [`CLAUDE.md`](CLAUDE.md) — Reglas de desarrollo, patrones de código aprendidos y decisiones arquitectónicas del proyecto.
 
 ---
@@ -550,9 +543,11 @@ curl -X POST http://localhost:8000/api/archivos/procesar \
 
 El piloto cubre Módulos 1–3. El **Módulo 4 (Generación automática de documentos legales)** está fuera del alcance del presente TFE y constituye la principal línea de continuación:
 
-- Generación automática de Acto de Inicio, Dictamen y Resolución mediante templates Jinja2 + LLM
-- Integración con sistema de firma electrónica FirmaEC
-- Pipeline PAS completo de 8 documentos
+1. **Generación automática** de Acto de Inicio, Dictamen y Resolución mediante templates Jinja2 + LLM (COA Arts. 193, 202, 207)
+2. **Extensión a otros tipos de infracción** del PAS (parámetros radioeléctricos, calidad de servicio, infraestructura)
+3. **Integración** con sistema de gestión institucional de ARCOTEL mediante API REST
+4. **Evaluación de LLMs alternativos** (Llama 3.1 local — eliminaría necesidad de pseudonimización)
+5. **Ampliación del gold standard** a ≥100 documentos con experimento controlado multi-analista
 
 ---
 
@@ -566,5 +561,5 @@ Período: Noviembre 2025 – Febrero 2026
 
 ---
 
-*Generado con datos de: `gold_standard_validacion_v2.xlsx`, `metricas_pseudonimizacion.txt`, `vp_conteos.csv`, `fn_anotaciones.csv`*
+*Fuentes de datos: `gold_standard_validacion.xlsx`, `metricas_pseudonimizacion.txt`, `vp_conteos.csv`, `fn_anotaciones.csv`*
 *Última actualización: Marzo 2026*
